@@ -138,6 +138,11 @@
     .doc-sheet{ box-shadow:none; padding:0; max-width:none; }
     .view{ display:none !important; }
     .view.printing{ display:block !important; }
+    /* Evita cabeçalhos "órfãos" no fim da página e parágrafos partidos ao meio */
+    .doc-sheet h1, .doc-sheet h2{ page-break-after: avoid; break-after: avoid; }
+    .doc-sheet p, .doc-sheet .sign, .doc-sheet table, .doc-sheet tr, .doc-sheet .doc-logo{ page-break-inside: avoid; break-inside: avoid; }
+    .doc-sheet h2{ page-break-before: auto; }
+    .doc-sheet{ orphans: 3; widows: 3; }
   }
 </style>
 </head>
@@ -170,6 +175,7 @@
     <button data-view="checklist" onclick="showView('checklist')"><span class="icon">&#9745;</span> Checklist Admissão</button>
     <button data-view="ocorrencias" onclick="showView('ocorrencias')"><span class="icon">&#128221;</span> Ocorrências</button>
     <button data-view="epis" onclick="showView('epis')"><span class="icon">&#129530;</span> Gestão de EPIs</button>
+    <button data-view="obras" onclick="showView('obras')"><span class="icon">&#127959;&#65039;</span> Obras</button>
     <button data-view="padrao" onclick="showView('padrao')"><span class="icon">&#128196;</span> Regimento &amp; Guia</button>
     <button data-view="empresa" onclick="showView('empresa')"><span class="icon">&#9881;</span> Dados da Empresa</button>
   </nav>
@@ -220,6 +226,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
         <h3 style="margin:0;">Colaboradores cadastrados</h3>
         <div class="btn-row" style="margin:0;">
+          <input type="text" id="buscaColab" placeholder="Buscar nome, CPF ou matrícula…" oninput="renderColabTable()" style="font-family:var(--font-ui); font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; min-width:200px;" />
           <select id="filtroFuncao" onchange="renderColabTable()" style="font-family:var(--font-ui); font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:7px;">
             <option value="">Todos os cargos</option>
           </select>
@@ -239,11 +246,13 @@
     <p class="page-sub">Escolha um colaborador cadastrado — o contrato e o termo de ciência já saem preenchidos, prontos para impressão ou PDF.</p>
     <div class="card">
       <div class="grid">
+        <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'contratoColabSelect')" /></div>
         <div class="field"><label>Colaborador</label><select id="contratoColabSelect" onchange="renderContrato()"></select></div>
         <div class="field"><label>Documento</label>
           <select id="contratoDocSelect" onchange="renderContrato()">
             <option value="contrato">Contrato Individual de Trabalho</option>
             <option value="termo">Termo de Ciência e Recebimento</option>
+            <option value="ficha">Ficha Cadastral do Colaborador</option>
           </select>
         </div>
       </div>
@@ -265,6 +274,7 @@
     <p class="page-sub">Um checklist por colaborador e por tipo de processo. Marque conforme cada etapa é concluída.</p>
     <div class="card">
       <div class="grid">
+        <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'checklistColabSelect')" /></div>
         <div class="field"><label>Colaborador</label><select id="checklistColabSelect" onchange="onChecklistColabChange()"></select></div>
         <div class="field"><label>Tipo de checklist</label>
           <select id="checklistTipo" onchange="renderChecklist()">
@@ -288,6 +298,7 @@
     <p class="page-sub">Registro de advertências, suspensões e elogios por colaborador — histórico útil se um caso evoluir para justa causa (Regimento Interno, Capítulo X).</p>
     <div class="card">
       <div class="grid">
+        <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'ocorColabSelect')" /></div>
         <div class="field"><label>Colaborador</label><select id="ocorColabSelect" onchange="renderOcorrencias()"></select></div>
       </div>
     </div>
@@ -306,6 +317,7 @@
     <div class="banner">&#9989; A assinatura abaixo (ou o registro de recusa com 2 testemunhas) é o que dá valor jurídico ao registro — sem ela, o EPI fica só "anotado", sem prova de entrega.</div>
     <div class="card">
       <div class="grid">
+        <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'epiColabSelect')" /></div>
         <div class="field"><label>Colaborador</label><select id="epiColabSelect" onchange="renderEpis()"></select></div>
       </div>
     </div>
@@ -357,6 +369,36 @@
         </div>
       </div>
       <div class="doc-preview-wrap"><div class="doc-sheet" id="epiReciboSheet"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-obras">
+    <h1 class="page-title">Obras</h1>
+    <p class="page-sub">Cadastro padronizado das obras — usado no campo "Obra / Lotação" do colaborador e no relatório de alocação.</p>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0;">Obras cadastradas</h3>
+        <button class="btn btn-primary" onclick="openObraModal()">+ Nova obra</button>
+      </div>
+      <div id="obrasTableWrap"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <h3 style="margin:0;">Relatório de alocação</h3>
+        <div class="btn-row" style="margin:0;">
+          <button class="btn btn-ghost" onclick="printRelatorioAlocacao()">Imprimir / Salvar PDF</button>
+          <button class="btn btn-ghost" onclick="exportRelatorioCSV()">&#8681; Exportar CSV</button>
+        </div>
+      </div>
+      <div id="relatorioAlocacaoWrap"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-relatorio-print">
+    <h1 class="page-title">Relatório de Alocação</h1>
+    <div class="card print-card">
+      <div class="doc-preview-wrap"><div class="doc-sheet" id="relatorioSheet"></div></div>
     </div>
   </section>
 
@@ -424,6 +466,14 @@
   <div class="modal">
     <h3 id="colabModalTitle">Novo colaborador</h3>
     <input type="hidden" id="colabId" />
+    <div style="display:flex; align-items:center; gap:14px; margin-bottom:8px;">
+      <div class="logo-preview-box" id="fotoPreview" style="width:72px; height:72px; border-radius:50%;">&#128100;</div>
+      <div>
+        <label style="display:block; font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; margin-bottom:5px;">Foto do colaborador</label>
+        <input type="file" id="fotoFile" accept="image/*" onchange="uploadFoto()" style="font-size:12px;" />
+        <div id="fotoHint" class="field-hint">Salve o colaborador primeiro para adicionar a foto.</div>
+      </div>
+    </div>
     <div class="grid">
       <div class="field" style="grid-column:1 / -1;"><label>Nome completo</label><input id="cNome" /></div>
       <div class="field"><label>Função / cargo</label>
@@ -444,8 +494,14 @@
       </div>
       <div class="field" id="cFuncaoOutraWrap" style="display:none;"><label>Especifique o cargo</label><input id="cFuncaoOutra" placeholder="Digite o cargo" /></div>
       <div class="field"><label>Obra / Lotação atual</label>
-        <input id="cObra" list="obrasDatalist" placeholder="Ex: Residencial Alfa — Torre 2" />
-        <datalist id="obrasDatalist"></datalist>
+        <select id="cObra" onchange="onObraSelectChange()"></select>
+      </div>
+      <div class="field" id="cObraOutraWrap" style="display:none;"><label>Especifique a obra</label><input id="cObraOutra" placeholder="Digite o nome da obra" /></div>
+      <div class="field"><label>Número de cadastro (matrícula)</label>
+        <div style="display:flex; gap:6px;">
+          <input id="cMatricula" placeholder="Ex: 0042" style="flex:1;" />
+          <button class="btn btn-ghost" type="button" style="padding:9px 12px;" onclick="sugerirMatricula()" title="Sugerir próximo número">&#8635;</button>
+        </div>
       </div>
       <div class="field"><label>CPF</label><input id="cCpf" placeholder="000.000.000-00" /></div>
       <div class="field"><label>RG</label><input id="cRg" /></div>
@@ -520,6 +576,24 @@
     <div class="btn-row">
       <button class="btn btn-primary" onclick="saveOcorrencia()">Registrar</button>
       <button class="btn btn-ghost" onclick="closeOcorModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="obraModalBackdrop">
+  <div class="modal">
+    <h3 id="obraModalTitle">Nova obra</h3>
+    <input type="hidden" id="obraId" />
+    <div class="grid full">
+      <div class="field"><label>Nome da obra</label><input id="obraNome" placeholder="Ex: Residencial Alfa — Torre 2" /></div>
+      <div class="field"><label>Endereço (opcional)</label><input id="obraEndereco" placeholder="Rua, número, bairro, cidade/UF" /></div>
+      <div class="field"><label>Status</label>
+        <select id="obraStatus"><option value="ativa">Ativa</option><option value="concluida">Concluída</option></select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveObra()">Salvar</button>
+      <button class="btn btn-ghost" onclick="closeObraModal()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -615,6 +689,8 @@ async function loadAll(){
     colaboradores = snap.docs.map(d=>({ id:d.id, ...d.data() }));
   }catch(e){ console.error('colaboradores', e); colaboradores = []; }
 
+  await loadObras();
+
   applyTheme(empresa.accent || "#001C7D");
   renderAllViews();
 }
@@ -703,11 +779,12 @@ function showView(name){
   if(name==='checklist') renderChecklist();
   if(name==='ocorrencias') renderOcorrencias();
   if(name==='epis') renderEpis();
+  if(name==='obras'){ renderObrasTable(); renderRelatorioAlocacao(); }
   if(name==='padrao') renderPadrao();
   if(name==='empresa') renderEmpresaForm();
 }
 function renderAllViews(){
-  renderBrand(); renderPainel(); renderColabTable(); populateColabSelects(); renderContrato(); renderPadrao(); renderEmpresaForm();
+  renderBrand(); renderPainel(); renderColabTable(); populateColabSelects(); renderContrato(); renderPadrao(); renderEmpresaForm(); renderObrasTable(); renderRelatorioAlocacao();
 }
 
 /* ---------- PAINEL (dashboard) ---------- */
@@ -808,7 +885,7 @@ function onCargoChange(){
 function openColabModal(id){
   document.getElementById('colabModalTitle').textContent = id ? 'Editar colaborador' : 'Novo colaborador';
   document.getElementById('colabId').value = id || '';
-  populateObrasDatalist();
+  populateObraSelectColab();
   if(id){
     const c = colaboradores.find(x=>x.id===id);
     document.getElementById('cNome').value = c.nome||'';
@@ -819,7 +896,15 @@ function openColabModal(id){
       document.getElementById('cFuncao').value = c.funcao || 'Pedreiro';
       document.getElementById('cFuncaoOutra').value = '';
     }
-    document.getElementById('cObra').value = c.obra||'';
+    const obraExiste = c.obra && obras.some(o=>o.nome===c.obra);
+    if(c.obra && !obraExiste){
+      document.getElementById('cObra').value = 'Outra';
+      document.getElementById('cObraOutra').value = c.obra;
+    } else {
+      document.getElementById('cObra').value = c.obra || '';
+      document.getElementById('cObraOutra').value = '';
+    }
+    document.getElementById('cMatricula').value = c.matricula||'';
     document.getElementById('cCpf').value = c.cpf||'';
     document.getElementById('cRg').value = c.rg||'';
     document.getElementById('cNacionalidade').value = c.nacionalidade||'brasileira';
@@ -835,25 +920,209 @@ function openColabModal(id){
     document.getElementById('cTreinoValidade').value = c.treinoValidade||'';
     document.getElementById('docAnexosWrap').style.display = 'block';
     document.getElementById('docAnexosHint').style.display = 'none';
+    document.getElementById('fotoHint').style.display = 'none';
     renderDocList(id);
+    renderFotoPreview(id);
   } else {
-    ['cNome','cCpf','cRg','cEstadoCivil','cEndereco','cSalario','cSalarioExtenso','cData','cFimExperiencia','cAsoValidade','cTreinoValidade','cFuncaoOutra','cObra'].forEach(f=>document.getElementById(f).value='');
+    ['cNome','cCpf','cRg','cEstadoCivil','cEndereco','cSalario','cSalarioExtenso','cData','cFimExperiencia','cAsoValidade','cTreinoValidade','cFuncaoOutra','cObraOutra','cMatricula'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('cObra').value = '';
     document.getElementById('cNacionalidade').value='brasileira';
     document.getElementById('cStatus').value='admissao';
     document.getElementById('cTipoContrato').value='indeterminado';
     document.getElementById('cFuncao').value='Pedreiro';
     document.getElementById('docAnexosWrap').style.display = 'none';
     document.getElementById('docAnexosHint').style.display = 'block';
+    document.getElementById('fotoHint').style.display = 'block';
+    document.getElementById('fotoPreview').innerHTML = '&#128100;';
   }
   onCargoChange();
+  onObraSelectChange();
   document.getElementById('colabModalBackdrop').classList.add('active');
 }
 function closeColabModal(){ document.getElementById('colabModalBackdrop').classList.remove('active'); }
 
-function populateObrasDatalist(){
-  const dl = document.getElementById('obrasDatalist');
-  const obras = [...new Set(colaboradores.map(c=>c.obra).filter(Boolean))].sort();
-  dl.innerHTML = obras.map(o=>'<option value="'+escapeHtml(o)+'"></option>').join('');
+/* ---------- OBRAS (cadastro padronizado + relatório de alocação) ---------- */
+let obras = [];
+async function loadObras(){
+  if(!db) return;
+  try{
+    const snap = await db.collection('obras').orderBy('nome').get();
+    obras = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }catch(e){ console.error('obras', e); obras = []; }
+}
+function populateObraSelectColab(){
+  const sel = document.getElementById('cObra');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Selecione a obra</option>' +
+    obras.filter(o=>o.status!=='concluida').map(o=>'<option value="'+escapeHtml(o.nome)+'">'+escapeHtml(o.nome)+'</option>').join('') +
+    (obras.some(o=>o.status==='concluida') ? '<optgroup label="Obras concluídas">'+obras.filter(o=>o.status==='concluida').map(o=>'<option value="'+escapeHtml(o.nome)+'">'+escapeHtml(o.nome)+'</option>').join('')+'</optgroup>' : '') +
+    '<option value="Outra">Outra (especificar)</option>';
+  if([...sel.options].some(op=>op.value===prev)) sel.value = prev;
+}
+function onObraSelectChange(){
+  const sel = document.getElementById('cObra');
+  document.getElementById('cObraOutraWrap').style.display = sel.value==='Outra' ? 'block' : 'none';
+}
+function openObraModal(id){
+  document.getElementById('obraModalTitle').textContent = id ? 'Editar obra' : 'Nova obra';
+  document.getElementById('obraId').value = id || '';
+  if(id){
+    const o = obras.find(x=>x.id===id);
+    document.getElementById('obraNome').value = o.nome||'';
+    document.getElementById('obraEndereco').value = o.endereco||'';
+    document.getElementById('obraStatus').value = o.status||'ativa';
+  } else {
+    document.getElementById('obraNome').value = '';
+    document.getElementById('obraEndereco').value = '';
+    document.getElementById('obraStatus').value = 'ativa';
+  }
+  document.getElementById('obraModalBackdrop').classList.add('active');
+}
+function closeObraModal(){ document.getElementById('obraModalBackdrop').classList.remove('active'); }
+async function saveObra(){
+  const id = document.getElementById('obraId').value;
+  const nome = document.getElementById('obraNome').value.trim();
+  if(!nome){ alert('Informe o nome da obra.'); return; }
+  const data = {
+    nome,
+    endereco: document.getElementById('obraEndereco').value.trim(),
+    status: document.getElementById('obraStatus').value,
+    ...auditFields(!id),
+  };
+  try{
+    const docId = id || ('obra'+Date.now());
+    await db.collection('obras').doc(docId).set(data, { merge: true });
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  if(id){ const idx = obras.findIndex(x=>x.id===id); obras[idx] = { ...obras[idx], ...data }; }
+  else{ obras.push({ id: id || undefined, ...data }); await loadObras(); }
+  closeObraModal();
+  renderObrasTable();
+  populateObraSelectColab();
+  renderRelatorioAlocacao();
+}
+async function deleteObra(id){
+  const o = obras.find(x=>x.id===id);
+  const emUso = colaboradores.filter(c=>c.obra===(o&&o.nome)).length;
+  const msg = emUso>0
+    ? 'Esta obra tem '+emUso+' colaborador(es) alocado(s). Eles não serão apagados, mas ficarão com a obra em branco. Excluir mesmo assim?'
+    : 'Excluir esta obra?';
+  if(!confirm(msg)) return;
+  try{ await db.collection('obras').doc(id).delete(); }
+  catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  obras = obras.filter(x=>x.id!==id);
+  renderObrasTable();
+  populateObraSelectColab();
+  renderRelatorioAlocacao();
+}
+function renderObrasTable(){
+  const wrap = document.getElementById('obrasTableWrap');
+  if(!wrap) return;
+  if(obras.length===0){
+    wrap.innerHTML = '<div class="empty-state"><div class="big">&#127959;&#65039;</div>Nenhuma obra cadastrada ainda.</div>';
+    return;
+  }
+  const rows = obras.map(o=>{
+    const count = colaboradores.filter(c=>c.obra===o.nome && c.status!=='desligado').length;
+    return '<tr>'+
+      '<td><strong>'+escapeHtml(o.nome)+'</strong><br><span style="color:var(--ink-soft); font-size:11.5px;">'+escapeHtml(o.endereco||'—')+'</span></td>'+
+      '<td><span class="tag">'+(o.status==='concluida'?'Concluída':'Ativa')+'</span></td>'+
+      '<td>'+count+'</td>'+
+      '<td class="row-actions">'+
+        '<button title="Editar" onclick="openObraModal(\''+o.id+'\')">&#9998;</button>'+
+        '<button title="Excluir" onclick="deleteObra(\''+o.id+'\')">&#128465;</button>'+
+      '</td></tr>';
+  }).join('');
+  wrap.innerHTML = '<table><thead><tr><th>Obra</th><th>Status</th><th>Colaboradores</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function renderRelatorioAlocacao(){
+  const wrap = document.getElementById('relatorioAlocacaoWrap');
+  if(!wrap) return;
+  const ativos = colaboradores.filter(c=>c.status!=='desligado');
+  const grupos = {};
+  ativos.forEach(c=>{
+    const key = c.obra || 'Sem obra definida';
+    if(!grupos[key]) grupos[key] = [];
+    grupos[key].push(c);
+  });
+  const chaves = Object.keys(grupos).sort((a,b)=> a==='Sem obra definida' ? 1 : (b==='Sem obra definida' ? -1 : a.localeCompare(b)));
+  if(chaves.length===0){ wrap.innerHTML = '<div class="empty-state">Nenhum colaborador ativo cadastrado ainda.</div>'; return; }
+  wrap.innerHTML = chaves.map(k=>{
+    const lista = grupos[k];
+    return '<div class="alert-row" style="align-items:flex-start; flex-direction:column; gap:6px; padding:12px 4px;">'+
+      '<div style="display:flex; justify-content:space-between; width:100%;"><strong>'+escapeHtml(k)+'</strong><span class="tag">'+lista.length+' colaborador(es)</span></div>'+
+      '<div style="font-size:12.5px; color:var(--ink-soft);">'+lista.map(c=>escapeHtml(c.nome)+' ('+escapeHtml(c.funcao||'—')+')').join(', ')+'</div>'+
+    '</div>';
+  }).join('');
+}
+function relatorioAlocacaoHTML(){
+  const ativos = colaboradores.filter(c=>c.status!=='desligado');
+  const grupos = {};
+  ativos.forEach(c=>{ const key = c.obra || 'Sem obra definida'; if(!grupos[key]) grupos[key]=[]; grupos[key].push(c); });
+  const chaves = Object.keys(grupos).sort((a,b)=> a==='Sem obra definida' ? 1 : (b==='Sem obra definida' ? -1 : a.localeCompare(b)));
+  let body = logoBlock() + '<h1>RELATÓRIO DE ALOCAÇÃO DE COLABORADORES</h1>' +
+    '<p style="text-align:center; color:#888; font-size:12px;">'+escapeHtml(empresa.nome)+' &middot; Gerado em '+new Date().toLocaleDateString('pt-BR')+'</p>';
+  chaves.forEach(k=>{
+    const lista = grupos[k];
+    body += '<h2>'+escapeHtml(k)+' — '+lista.length+' colaborador(es)</h2>';
+    body += '<table style="width:100%; border-collapse:collapse; margin-bottom:14px;">'+
+      '<thead><tr>'+['Nome','Função','Matrícula','CPF'].map(h=>'<th style="text-align:left; font-size:11px; border-bottom:1px solid #ccc; padding:4px;">'+h+'</th>').join('')+'</tr></thead><tbody>'+
+      lista.map(c=>'<tr>'+['nome','funcao','matricula','cpf'].map(f=>'<td style="font-size:12px; border-bottom:1px solid #eee; padding:4px;">'+escapeHtml(c[f]||'—')+'</td>').join('')+'</tr>').join('')+
+      '</tbody></table>';
+  });
+  body += '<p style="margin-top:20px; font-size:11px; color:#888;">Total geral: '+ativos.length+' colaborador(es) ativo(s). Documento gerado automaticamente pelo sistema.</p>';
+  return body;
+}
+function printRelatorioAlocacao(){
+  document.getElementById('relatorioSheet').innerHTML = relatorioAlocacaoHTML();
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('printing'));
+  document.getElementById('view-relatorio-print').classList.add('printing');
+  window.print();
+}
+function exportRelatorioCSV(){
+  const ativos = colaboradores.filter(c=>c.status!=='desligado');
+  const headers = ['Obra','Nome','Função','Matrícula','CPF'];
+  const rows = ativos.map(c=>[c.obra||'Sem obra definida', c.nome, c.funcao, c.matricula, c.cpf]);
+  const csv = [headers, ...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'relatorio_alocacao_'+(empresa.nome||'empresa').replace(/[^a-zA-Z0-9]+/g,'_')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- MATRÍCULA (número de cadastro) ---------- */
+function sugerirMatricula(){
+  const nums = colaboradores.map(c=>parseInt(c.matricula,10)).filter(n=>!isNaN(n));
+  const proximo = (nums.length ? Math.max(...nums) : 0) + 1;
+  document.getElementById('cMatricula').value = String(proximo).padStart(4,'0');
+}
+
+/* ---------- FOTO DO COLABORADOR ---------- */
+function renderFotoPreview(colabId){
+  const c = colaboradores.find(x=>x.id===colabId);
+  const box = document.getElementById('fotoPreview');
+  if(c && c.fotoUrl){ box.innerHTML = '<img src="'+c.fotoUrl+'" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" />'; }
+  else{ box.innerHTML = '&#128100;'; }
+}
+async function uploadFoto(){
+  const colabId = document.getElementById('colabId').value;
+  if(!colabId){ alert('Salve o colaborador antes de adicionar a foto.'); return; }
+  const fileInput = document.getElementById('fotoFile');
+  const file = fileInput.files[0];
+  if(!file) return;
+  try{
+    const c = colaboradores.find(x=>x.id===colabId);
+    if(c && c.fotoPath){ try{ await storage.ref(c.fotoPath).delete(); }catch(e){ console.error(e); } }
+    const path = 'colaboradores/'+colabId+'/foto_'+Date.now()+'_'+file.name;
+    const snapshot = await storage.ref(path).put(file);
+    const url = await snapshot.ref.getDownloadURL();
+    await db.collection('colaboradores').doc(colabId).update({ fotoUrl: url, fotoPath: path, ...auditFields(false) });
+    if(c){ c.fotoUrl = url; c.fotoPath = path; }
+    renderFotoPreview(colabId);
+    fileInput.value = '';
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); }
 }
 
 async function saveColaborador(){
@@ -862,6 +1131,8 @@ async function saveColaborador(){
   if(!nome){ alert('Informe o nome do colaborador.'); return; }
   const funcaoSel = document.getElementById('cFuncao').value;
   const funcao = funcaoSel==='Outro' ? document.getElementById('cFuncaoOutra').value.trim() : funcaoSel;
+  const obraSel = document.getElementById('cObra').value;
+  const obra = obraSel==='Outra' ? document.getElementById('cObraOutra').value.trim() : obraSel;
   const isNew = !id;
   const statusAnterior = id ? (colaboradores.find(x=>x.id===id)||{}).status : null;
   const novoId = id || ('c'+Date.now());
@@ -869,7 +1140,8 @@ async function saveColaborador(){
   const data = {
     id: novoId, nome,
     funcao,
-    obra: document.getElementById('cObra').value.trim(),
+    obra,
+    matricula: document.getElementById('cMatricula').value.trim(),
     cpf: document.getElementById('cCpf').value.trim(),
     rg: document.getElementById('cRg').value.trim(),
     nacionalidade: document.getElementById('cNacionalidade').value.trim(),
@@ -895,16 +1167,28 @@ async function saveColaborador(){
   else{ colaboradores.push(data); }
   try{
     await db.collection('colaboradores').doc(data.id).set(data, { merge: true });
-  }catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
-  closeColabModal(); renderColabTable(); populateColabSelects();
+  }catch(e){
+    console.error(e);
+    // Desfaz a mutação local otimista e recarrega o estado real do servidor, já que a gravação falhou
+    await loadAll();
+    alert(traduzErroDados(e));
+    return;
+  }
+  closeColabModal(); renderColabTable(); populateColabSelects(); renderRelatorioAlocacao(); renderPainel();
   if(viraDesligado){
     alert('Colaborador marcado como desligado. Um Checklist de Desligamento foi criado — acesse "Checklist Admissão" e troque o tipo para "Desligamento".');
   }
 }
 async function deleteColaborador(id){
-  if(!confirm('Remover este colaborador do cadastro? O checklist, o histórico de ocorrências e de EPIs dele também serão apagados.')) return;
-  colaboradores = colaboradores.filter(x=>x.id!==id);
+  if(!confirm('Remover este colaborador do cadastro? O checklist, o histórico de ocorrências, de EPIs e os documentos/foto dele também serão apagados — inclusive do armazenamento, para não ocupar a cota gratuita.')) return;
+  const c = colaboradores.find(x=>x.id===id);
   try{
+    // Apaga arquivos do Storage primeiro (documentos anexos + foto), depois os dados do Firestore
+    const arquivos = [...((c && c.documentos) || [])];
+    if(c && c.fotoPath) arquivos.push({ path: c.fotoPath });
+    for(const doc of arquivos){
+      if(doc.path){ try{ await storage.ref(doc.path).delete(); }catch(e){ console.error('Falha ao remover arquivo do Storage (prosseguindo):', e); } }
+    }
     await db.collection('colaboradores').doc(id).delete();
     const snap = await db.collection('ocorrencias').where('colaboradorId','==',id).get();
     const batch = db.batch();
@@ -912,8 +1196,13 @@ async function deleteColaborador(id){
     const snapEpis = await db.collection('epis').where('colaboradorId','==',id).get();
     snapEpis.forEach(d=>batch.delete(d.ref));
     await batch.commit();
-  }catch(e){ console.error(e); alert(traduzErroDados(e)); }
-  renderColabTable(); populateColabSelects();
+  }catch(e){
+    console.error(e);
+    alert(traduzErroDados(e) + ' O colaborador NÃO foi removido — nada foi apagado da lista.');
+    return; // não mexe no estado local: se a exclusão falhou, o colaborador continua visível de propósito
+  }
+  colaboradores = colaboradores.filter(x=>x.id!==id);
+  renderColabTable(); populateColabSelects(); renderPainel();
 }
 function fmtData(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
 function populateFiltroFuncao(){
@@ -936,17 +1225,26 @@ function renderColabTable(){
   const wrap = document.getElementById('colabTableWrap');
   const filtroFuncao = document.getElementById('filtroFuncao').value;
   const filtroObra = document.getElementById('filtroObra').value;
+  const busca = (document.getElementById('buscaColab').value || '').trim().toLowerCase();
   let list = colaboradores;
   if(filtroFuncao) list = list.filter(c=>c.funcao===filtroFuncao);
   if(filtroObra) list = list.filter(c=>c.obra===filtroObra);
+  if(busca) list = list.filter(c=>
+    (c.nome||'').toLowerCase().includes(busca) ||
+    (c.cpf||'').toLowerCase().includes(busca) ||
+    (c.matricula||'').toLowerCase().includes(busca)
+  );
   if(list.length===0){
-    wrap.innerHTML = '<div class="empty-state"><div class="big">&#128203;</div>'+((filtroFuncao||filtroObra) ? 'Nenhum colaborador com esse filtro.' : 'Nenhum colaborador cadastrado ainda.<br>Clique em "Novo colaborador" para começar.')+'</div>';
+    wrap.innerHTML = '<div class="empty-state"><div class="big">&#128203;</div>'+((filtroFuncao||filtroObra||busca) ? 'Nenhum colaborador com esse filtro.' : 'Nenhum colaborador cadastrado ainda.<br>Clique em "Novo colaborador" para começar.')+'</div>';
     return;
   }
   const rows = list.map(c=>{
     const statusLabel = c.status==='ativo'?'Ativo':(c.status==='admissao'?'Em admissão':'Desligado');
+    const avatar = c.fotoUrl
+      ? '<img src="'+c.fotoUrl+'" style="width:30px; height:30px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:8px;" />'
+      : '<span style="display:inline-flex; width:30px; height:30px; border-radius:50%; background:var(--bg); align-items:center; justify-content:center; vertical-align:middle; margin-right:8px; font-size:13px; color:var(--ink-soft);">&#128100;</span>';
     return '<tr>'+
-      '<td><strong>'+escapeHtml(c.nome)+'</strong><br><span style="color:var(--ink-soft); font-size:11.5px;">'+escapeHtml(c.funcao||'—')+'</span></td>'+
+      '<td>'+avatar+'<strong>'+escapeHtml(c.nome)+'</strong><br><span style="color:var(--ink-soft); font-size:11.5px; margin-left:38px;">'+escapeHtml(c.funcao||'—')+(c.matricula?' &middot; Matr. '+escapeHtml(c.matricula):'')+'</span></td>'+
       '<td>'+escapeHtml(c.obra||'—')+'</td>'+
       '<td>'+escapeHtml(c.cpf||'—')+'</td>'+
       '<td>'+fmtData(c.dataAdmissao)+'</td>'+
@@ -969,8 +1267,19 @@ function populateColabSelects(){
   ['contratoColabSelect','checklistColabSelect','ocorColabSelect','epiColabSelect'].forEach(selId=>{
     const sel = document.getElementById(selId);
     const prev = sel.value;
-    sel.innerHTML = '<option value="">Selecione um colaborador…</option>' + colaboradores.map(c=>'<option value="'+c.id+'">'+escapeHtml(c.nome)+'</option>').join('');
+    sel.innerHTML = '<option value="">Selecione um colaborador…</option>' + colaboradores.map(c=>
+      '<option value="'+c.id+'" data-search="'+escapeHtml(((c.nome||'')+' '+(c.cpf||'')+' '+(c.matricula||'')).toLowerCase())+'">'+escapeHtml(c.nome)+'</option>'
+    ).join('');
     if(colaboradores.some(c=>c.id===prev)) sel.value = prev;
+  });
+}
+function filterColabSelect(inputEl, selectId){
+  const term = inputEl.value.trim().toLowerCase();
+  const sel = document.getElementById(selectId);
+  Array.from(sel.options).forEach(opt=>{
+    if(!opt.value){ opt.style.display=''; return; } // "Selecione um colaborador…" sempre visível
+    const alvo = opt.dataset.search || opt.textContent.toLowerCase();
+    opt.style.display = alvo.includes(term) ? '' : 'none';
   });
 }
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
@@ -985,7 +1294,34 @@ function renderContrato(){
   const c = colaboradores.find(x=>x.id===colabId);
   if(!c){ card.style.display='none'; return; }
   card.style.display='block';
-  document.getElementById('contratoSheet').innerHTML = doc==='termo' ? termoHTML(c) : contratoHTML(c);
+  const conteudo = doc==='termo' ? termoHTML(c) : (doc==='ficha' ? fichaColaboradorHTML(c) : contratoHTML(c));
+  document.getElementById('contratoSheet').innerHTML = conteudo;
+}
+function fichaColaboradorHTML(c){
+  const statusLabel = c.status==='ativo'?'Ativo':(c.status==='admissao'?'Em admissão':'Desligado');
+  const fotoHTML = c.fotoUrl
+    ? '<img src="'+c.fotoUrl+'" style="width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid #ccc;" />'
+    : '<div style="width:96px; height:96px; border-radius:8px; border:1px solid #ccc; display:flex; align-items:center; justify-content:center; font-size:32px; color:#bbb;">&#128100;</div>';
+  return logoBlock() +
+  '<h1>FICHA CADASTRAL DO COLABORADOR</h1>' +
+  '<div style="display:flex; gap:18px; align-items:flex-start; margin-bottom:10px;">' + fotoHTML +
+    '<div style="flex:1;">' +
+      '<p style="margin:0 0 4px 0;"><strong>'+escapeHtml(c.nome||'—')+'</strong></p>' +
+      '<p style="margin:0 0 4px 0; font-size:12px; color:#555;">Matrícula: '+escapeHtml(c.matricula||'—')+' &nbsp;&middot;&nbsp; Status: '+statusLabel+'</p>' +
+      '<p style="margin:0; font-size:12px; color:#555;">'+escapeHtml(c.funcao||'—')+' — '+escapeHtml(c.obra||'Sem obra definida')+'</p>' +
+    '</div>' +
+  '</div>' +
+  '<h2>Dados Pessoais</h2>' +
+  '<p><strong>CPF:</strong> '+hl(c.cpf)+' &nbsp; <strong>RG:</strong> '+hl(c.rg)+'</p>' +
+  '<p><strong>Nacionalidade:</strong> '+escapeHtml(c.nacionalidade||'—')+' &nbsp; <strong>Estado civil:</strong> '+escapeHtml(c.estadoCivil||'—')+'</p>' +
+  '<p><strong>Endereço:</strong> '+escapeHtml(c.endereco||'—')+'</p>' +
+  '<h2>Dados Contratuais</h2>' +
+  '<p><strong>Cargo:</strong> '+escapeHtml(c.funcao||'—')+' &nbsp; <strong>Obra/Lotação:</strong> '+escapeHtml(c.obra||'—')+'</p>' +
+  '<p><strong>Data de admissão:</strong> '+fmtData(c.dataAdmissao)+' &nbsp; <strong>Tipo de contrato:</strong> '+escapeHtml(c.tipoContrato==='indeterminado'?'Prazo indeterminado':(c.tipoContrato||'—'))+'</p>' +
+  '<p><strong>Salário:</strong> R$ '+escapeHtml(c.salario||'—')+' ('+escapeHtml(c.salarioExtenso||'—')+')</p>' +
+  '<h2>Segurança e Saúde Ocupacional</h2>' +
+  '<p><strong>Validade do ASO periódico:</strong> '+fmtData(c.asoValidade)+' &nbsp; <strong>Validade do treinamento NR:</strong> '+fmtData(c.treinoValidade)+'</p>' +
+  '<p style="margin-top:24px; font-size:11px; color:#888;">Ficha gerada automaticamente pelo sistema em '+new Date().toLocaleString('pt-BR')+'.</p>';
 }
 function logoBlock(){
   if(empresa.logo){ return '<div class="doc-logo"><img src="'+empresa.logo+'" /></div>'; }
@@ -1524,14 +1860,20 @@ function traduzErroAuth(e){
 function traduzErroDados(e){
   const code = (e && e.code) || '';
   const mapa = {
-    'permission-denied': 'Sem permissão para salvar. As Regras do Firestore (ou do Storage) ainda não foram publicadas, ou não permitem gravação para usuários logados. Confira em Firestore Database → Regras (e Storage → Regras).',
+    'permission-denied': 'Sem permissão para salvar. As Regras do Firestore (ou do Storage) ainda não foram publicadas, ou não permitem gravação para usuários logados. Confira em Firestore Database → Regras (e Storage → Regras) — e confira se está editando o projeto certo (BENG ou SAVA).',
     'unavailable': 'Sem conexão com o Firebase agora. Verifique sua internet e tente novamente.',
     'not-found': 'Não encontrado. Confira se o Firestore Database foi criado neste projeto (Firestore Database → Criar banco de dados).',
     'failed-precondition': 'O Firestore ainda não foi criado neste projeto Firebase — vá em Firestore Database → Criar banco de dados.',
     'unauthenticated': 'Sua sessão expirou. Saia e entre novamente.',
     'resource-exhausted': 'Cota gratuita do Firebase atingida por hoje. Tente novamente mais tarde.',
-    'storage/unauthorized': 'Sem permissão para enviar o arquivo. Confira as Regras do Firebase Storage.',
-    'storage/unknown': 'Erro desconhecido no Storage — confira se o Storage foi ativado no projeto (Storage → Vamos começar).',
+    'storage/unauthorized': 'Sem permissão para enviar o arquivo. As Regras do Firebase Storage ainda não foram publicadas para este projeto — vá em Storage → Regras, cole a regra e clique em Publicar.',
+    'storage/unauthenticated': 'Sua sessão expirou. Saia e entre novamente antes de enviar o arquivo.',
+    'storage/unknown': 'Erro desconhecido no Storage. As causas mais comuns são: (1) o Storage nunca foi ativado neste projeto (Storage → Vamos começar) ou (2) o projeto ainda está no plano gratuito Spark, que não permite criar o bucket padrão do Storage — é necessário upgrade para o plano Blaze (Project Settings → Usage and billing).',
+    'storage/bucket-not-found': 'O projeto não tem um bucket de Storage configurado. Vá em Storage → Vamos começar para criar o bucket (pode exigir o plano Blaze).',
+    'storage/object-not-found': 'Arquivo não encontrado no Storage (pode já ter sido removido).',
+    'storage/quota-exceeded': 'Cota gratuita do Storage atingida. Considere o plano Blaze ou libere espaço removendo documentos antigos.',
+    'storage/canceled': 'Envio cancelado.',
+    'storage/retry-limit-exceeded': 'O envio demorou demais e foi interrompido. Verifique sua conexão e tente novamente com um arquivo menor.',
   };
   if(mapa[code]) return mapa[code];
   if(code) return 'Erro do Firebase: '+code+'. Tire um print desta mensagem e envie para ajuste.';
