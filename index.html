@@ -1,0 +1,2961 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sistema de RH — SAVA Construtora</title>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-storage-compat.js"></script>
+<style>
+  :root{
+    --ink:#1c1c1c; --ink-soft:#5a5a5a; --line:#e2e0da; --paper:#fdfcfa; --bg:#f4f2ee;
+    --accent:#001C7D; --accent-soft:#e7efe9; --accent-dark:#163a20; --accent-text:#ffffff;
+    --danger:#a8341f; --radius:10px;
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    --font-doc: Arial, "Helvetica Neue", Helvetica, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{ font-family:var(--font-ui); background:var(--bg); color:var(--ink); min-height:100vh; display:flex; -webkit-font-smoothing:antialiased; }
+
+  .sidebar{ width:230px; flex-shrink:0; background:var(--paper); border-right:1px solid var(--line); display:flex; flex-direction:column; padding:20px 14px; position:sticky; top:0; height:100vh; }
+  .brand-row{ display:flex; align-items:center; gap:10px; padding:4px 6px 18px 6px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+  .brand-logo-img{ height:38px; width:auto; display:block; max-width:100%; object-fit:contain; }
+  .brand-logo-text{ font-weight:800; font-size:15px; letter-spacing:.5px; color:var(--accent); line-height:1.15; }
+
+  nav.nav{ display:flex; flex-direction:column; gap:2px; }
+  nav.nav button{ display:flex; align-items:center; gap:10px; text-align:left; border:none; background:transparent; padding:10px 10px; border-radius:8px; font-size:13.5px; font-weight:600; color:var(--ink-soft); cursor:pointer; font-family:var(--font-ui); }
+  nav.nav button:hover{ background:var(--bg); color:var(--ink); }
+  nav.nav button.active{ background:var(--accent-soft); color:var(--accent-dark); }
+  nav.nav .icon{ width:16px; text-align:center; font-size:13px; }
+
+  .sidebar-foot{ margin-top:auto; padding-top:14px; border-top:1px solid var(--line); font-size:10.5px; color:var(--ink-soft); line-height:1.5; }
+  .sync-dot{ display:inline-block; width:6px; height:6px; border-radius:50%; background:#2f9e51; margin-right:5px; }
+
+  main{ flex:1; padding:32px 40px; max-width:1100px; }
+  .page-title{ font-size:22px; font-weight:800; margin:0 0 4px 0; }
+  .page-sub{ font-size:13px; color:var(--ink-soft); margin:0 0 26px 0; max-width:640px; line-height:1.5; }
+
+  .card{ background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:22px 24px; margin-bottom:20px; }
+  .card h3{ margin:0 0 14px 0; font-size:14px; font-weight:800; text-transform:uppercase; letter-spacing:.5px; color:var(--accent-dark); }
+
+  .grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
+  .grid.full{ grid-template-columns:1fr; }
+  .field{ display:flex; flex-direction:column; gap:5px; }
+  .field label{ font-size:11.5px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; letter-spacing:.3px; }
+  .field input, .field select, .field textarea{ font-family:var(--font-ui); font-size:13.5px; padding:9px 10px; border:1px solid var(--line); border-radius:7px; background:#fff; color:var(--ink); }
+  .field input[type=color]{ padding:3px; height:38px; cursor:pointer; }
+  .field input:focus, .field select:focus, .field textarea:focus{ outline:2px solid var(--accent); outline-offset:1px; }
+  .field textarea{ resize:vertical; min-height:56px; }
+  .field-hint{ font-size:11px; color:var(--ink-soft); }
+
+  .btn{ font-family:var(--font-ui); font-size:13px; font-weight:700; padding:9px 16px; border-radius:8px; border:1px solid transparent; cursor:pointer; display:inline-flex; align-items:center; gap:7px; }
+  .btn-primary{ background:var(--accent); color:var(--accent-text); }
+  .btn-primary:hover{ filter:brightness(0.92); }
+  .btn-ghost{ background:transparent; border:1px solid var(--line); color:var(--ink); }
+  .btn-ghost:hover{ background:var(--bg); }
+  .btn-danger{ background:transparent; border:1px solid #eccfc7; color:var(--danger); }
+  .btn-danger:hover{ background:#fbeeeb; }
+  .btn-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; align-items:center; }
+
+  table{ width:100%; border-collapse:collapse; font-size:13px; }
+  th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; color:var(--ink-soft); padding:8px 10px; border-bottom:1px solid var(--line); }
+  td{ padding:10px 10px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  tr:last-child td{ border-bottom:none; }
+  .tag{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; background:var(--accent-soft); color:var(--accent-dark); }
+  .row-actions{ display:flex; gap:6px; }
+  .row-actions button{ background:none; border:none; cursor:pointer; font-size:12px; color:var(--ink-soft); padding:4px 6px; border-radius:5px;}
+  .row-actions button:hover{ background:var(--bg); color:var(--ink); }
+  .empty-state{ padding:40px 10px; text-align:center; color:var(--ink-soft); font-size:13px; }
+  .empty-state .big{ font-size:26px; margin-bottom:8px; }
+
+  .progress-bar{ height:6px; background:var(--bg); border-radius:99px; overflow:hidden; border:1px solid var(--line); }
+  .progress-fill{ height:100%; background:var(--accent); transition:width .25s ease; }
+
+  .checklist-item{ display:flex; align-items:flex-start; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line); }
+  .checklist-item:last-child{ border-bottom:none; }
+  .checklist-item input[type=checkbox]{ width:17px; height:17px; margin-top:2px; accent-color:var(--accent); }
+  .checklist-item .ci-text{ font-size:13.5px; }
+  .checklist-item .ci-resp{ font-size:11px; color:var(--ink-soft); }
+  .checklist-item.done .ci-text{ text-decoration:line-through; color:var(--ink-soft); }
+
+  .doc-toolbar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
+  .doc-preview-wrap{ background:var(--bg); border-radius:var(--radius); padding:26px; }
+  .doc-sheet{ background:#fff; max-width:760px; margin:0 auto; padding:56px 60px; box-shadow:0 2px 18px rgba(0,0,0,.08); font-family:var(--font-doc); font-size:12pt; line-height:1.5; color:#1a1a1a; }
+  .doc-sheet h1{ font-size:18px; text-align:center; margin:0 0 22px 0; }
+  .doc-sheet .doc-logo{ text-align:center; margin-bottom:14px; }
+  .doc-sheet .doc-logo img{ height:44px; }
+  .doc-sheet .doc-logo .txt-logo{ font-family:var(--font-ui); font-weight:800; color:var(--accent); font-size:16px; }
+  .doc-sheet h2{ font-size:13.5px; margin:22px 0 10px 0; color:var(--accent-dark); border-bottom:1px solid #ddd; padding-bottom:4px; }
+  .doc-sheet p{ margin:0 0 10px 0; text-align:justify; }
+  .doc-sheet .sign{ margin-top:40px; text-align:center; }
+  .doc-sheet .sign .line{ border-top:1px solid #333; width:300px; margin:34px auto 4px auto; }
+  .placeholder-hl{ background:#fdf1d8; padding:0 2px; border-radius:2px; }
+
+  .banner{ display:flex; gap:10px; align-items:flex-start; background:var(--accent-soft); border:1px solid var(--accent); border-radius:8px; padding:12px 14px; font-size:12.5px; color:var(--accent-dark); margin-bottom:20px; line-height:1.5; }
+
+  .kpi-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:20px; }
+  .kpi-card{ background:var(--paper); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; }
+  .kpi-card .kpi-num{ font-size:26px; font-weight:800; color:var(--accent-dark); line-height:1; }
+  .kpi-card .kpi-label{ font-size:11.5px; color:var(--ink-soft); margin-top:6px; font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+  .alert-row{ display:flex; justify-content:space-between; align-items:center; padding:9px 4px; border-bottom:1px solid var(--line); font-size:13px; }
+  .alert-row:last-child{ border-bottom:none; }
+  .alert-pill{ font-size:10.5px; font-weight:700; padding:2px 8px; border-radius:999px; }
+  .alert-pill.late{ background:#fbeeeb; color:var(--danger); }
+  .alert-pill.soon{ background:#fdf1d8; color:#8a5a00; }
+  @media (max-width:840px){ .kpi-row{ grid-template-columns:1fr 1fr; } }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(20,20,15,.45); display:none; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .modal-backdrop.active{ display:flex; }
+  .modal{ background:#fff; border-radius:12px; padding:26px 28px; max-width:640px; width:100%; max-height:88vh; overflow:auto; }
+  .modal h3{ margin-top:0; }
+  .modal-tabs{ display:flex; gap:2px; border-bottom:1.5px solid var(--line); margin-bottom:16px; overflow-x:auto; }
+  .modal-tab-btn{ font-family:var(--font-ui); font-size:12.5px; font-weight:700; padding:9px 12px; border:none; background:transparent; color:var(--ink-soft); cursor:pointer; border-bottom:2.5px solid transparent; white-space:nowrap; }
+  .modal-tab-btn.active{ color:var(--accent-dark); border-bottom-color:var(--accent); }
+  .modal-tab-content{ display:none; }
+  .modal-tab-content.active{ display:block; }
+
+  .logo-preview-row{ display:flex; align-items:center; gap:14px; margin-top:6px; }
+  .logo-preview-box{ width:64px; height:64px; border-radius:10px; border:1px solid var(--line); display:flex; align-items:center; justify-content:center; background:#fff; overflow:hidden; }
+  .logo-preview-box img{ width:100%; height:100%; object-fit:contain; }
+  .swatch-row{ display:flex; gap:8px; align-items:center; margin-top:6px; }
+  .swatch{ width:28px; height:28px; border-radius:6px; border:1px solid var(--line); cursor:pointer; }
+
+  .sign-pad-wrap{ border:1.5px dashed var(--line); border-radius:10px; background:#fff; touch-action:none; overflow:hidden; }
+  .sign-pad-wrap canvas{ display:block; width:100%; height:150px; touch-action:none; }
+
+  .acoes-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:16px; }
+  .acao-btn{
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+    background:var(--paper); border:1.5px solid var(--line); border-radius:14px; padding:32px 16px;
+    cursor:pointer; font-family:var(--font-ui); text-align:center; min-height:150px;
+    transition:transform .1s ease, border-color .15s ease;
+  }
+  .acao-btn:active{ transform:scale(0.97); }
+  .acao-btn:hover{ border-color:var(--accent); }
+
+  .dropzone{ display:flex; align-items:center; gap:14px; padding:12px 14px; border:1.5px dashed var(--line); border-radius:10px; cursor:pointer; transition:border-color .15s ease, background .15s ease; background:#fff; }
+  .dropzone:hover{ border-color:var(--accent); }
+  .dropzone.dragover{ border-color:var(--accent); background:var(--accent-soft); }
+  .dropzone-icon{ font-size:26px; flex-shrink:0; }
+
+  .epi-tabs{ display:flex; gap:2px; border-bottom:1.5px solid var(--line); margin-bottom:16px; overflow-x:auto; }
+  .epi-tab-btn{ font-family:var(--font-ui); font-size:13px; font-weight:700; padding:10px 14px; border:none; background:transparent; color:var(--ink-soft); cursor:pointer; border-bottom:2.5px solid transparent; white-space:nowrap; }
+  .epi-tab-btn.active{ color:var(--accent-dark); border-bottom-color:var(--accent); }
+  .epi-tab-content{ display:none; }
+  .epi-tab-content.active{ display:block; }
+  .acao-btn .acao-icon{ font-size:38px; line-height:1; }
+  .acao-btn .acao-label{ font-size:15px; font-weight:800; color:var(--ink); }
+  .acao-btn .acao-sub{ font-size:12px; color:var(--ink-soft); }
+  @media (max-width:840px){
+    .acoes-grid{ grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px; }
+    .acao-btn{ padding:22px 10px; min-height:120px; }
+    .acao-btn .acao-icon{ font-size:30px; }
+  }
+
+  @media (max-width:840px){
+    body{ flex-direction:column; }
+    .sidebar{ position:relative; width:100%; height:auto; }
+    .sidebar-foot{ display:none; }
+    main{ padding:20px; }
+    .grid{ grid-template-columns:1fr; }
+  }
+  @media print{
+    .sidebar, .doc-toolbar, .page-title, .page-sub, .banner, .card:not(.print-card){ display:none !important; }
+    body{ background:#fff; }
+    main{ padding:0; max-width:none; }
+    .doc-preview-wrap{ background:#fff; padding:0; }
+    .doc-sheet{ box-shadow:none; padding:0; max-width:none; }
+    .view{ display:none !important; }
+    .view.printing{ display:block !important; }
+    /* Evita cabeçalhos "órfãos" no fim da página e parágrafos partidos ao meio */
+    .doc-sheet h1, .doc-sheet h2{ page-break-after: avoid; break-after: avoid; }
+    .doc-sheet p, .doc-sheet .sign, .doc-sheet table, .doc-sheet tr, .doc-sheet .doc-logo{ page-break-inside: avoid; break-inside: avoid; }
+    .doc-sheet h2{ page-break-before: auto; }
+    .doc-sheet{ orphans: 3; widows: 3; }
+  }
+</style>
+</head>
+<body>
+
+<div id="versaoBadge" style="position:fixed; top:0; left:0; right:0; z-index:999; background:#F5C400; color:#1a1a1a; text-align:center; font-family:var(--font-ui); font-weight:800; font-size:13px; padding:6px; letter-spacing:.3px;">
+  ARQUIVO VERSÃO 2026-08-16-V4 — se você não está vendo esta faixa amarela, o arquivo publicado ainda é uma versão antiga
+</div>
+<div style="height:32px;"></div>
+
+<div class="modal-backdrop active" id="authGate" style="z-index:100;">
+  <div class="modal" style="max-width:380px; text-align:center;">
+    <div id="authLogoWrap" style="margin-bottom:10px;"></div>
+    <h3 style="margin-bottom:4px;">Entrar no sistema</h3>
+    <p style="font-size:12.5px; color:var(--ink-soft); margin-top:0;">Acesso restrito à equipe de RH de SAVA.</p>
+    <div class="grid full" style="text-align:left;">
+      <div class="field"><label>E-mail</label><input id="authEmail" type="email" autocomplete="username" /></div>
+      <div class="field"><label>Senha</label><input id="authSenha" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter') doLogin();" /></div>
+    </div>
+    <div id="authError" style="color:var(--danger); font-size:12.5px; margin-top:8px; display:none;"></div>
+    <div class="btn-row" style="justify-content:center;">
+      <button class="btn btn-primary" id="authLoginBtn" style="width:100%; justify-content:center;" onclick="doLogin()">Entrar</button>
+    </div>
+    <p style="font-size:11px; color:var(--ink-soft); margin-top:14px;">Não tem uma conta ainda? Peça para quem configurou o sistema criar seu acesso no painel do Firebase.</p>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="brand-row" id="brandRow"></div>
+
+  <nav class="nav">
+    <button class="active" data-view="painel" onclick="showView('painel')"><span class="icon">&#128202;</span> Painel</button>
+    <button data-view="acoes" onclick="showView('acoes')"><span class="icon">&#9889;</span> Ações Rápidas</button>
+    <button data-view="colaboradores" onclick="showView('colaboradores')"><span class="icon">&#9776;</span> Colaboradores</button>
+    <button data-view="contrato" onclick="showView('contrato')"><span class="icon">&#9998;</span> Gerar Contrato</button>
+    <button data-view="checklist" onclick="showView('checklist')"><span class="icon">&#9745;</span> Checklist Admissão</button>
+    <button data-view="ocorrencias" onclick="showView('ocorrencias')"><span class="icon">&#128221;</span> Ocorrências</button>
+    <button data-view="epis" onclick="showView('epis')"><span class="icon">&#129530;</span> Gestão de EPIs</button>
+    <button data-view="obras" onclick="showView('obras')"><span class="icon">&#127959;&#65039;</span> Obras</button>
+    <button data-view="padrao" onclick="showView('padrao')"><span class="icon">&#128196;</span> Regimento &amp; Guia</button>
+    <button data-view="empresa" onclick="showView('empresa')"><span class="icon">&#9881;</span> Dados da Empresa</button>
+    <button data-view="usuarios" onclick="showView('usuarios')"><span class="icon">&#128100;</span> Usuários</button>
+  </nav>
+
+  <div class="sidebar-foot">
+    <div><span class="sync-dot"></span>Banco de dados em nuvem (Firebase)</div>
+    <div style="margin-top:4px;">Conectado como <strong id="authUserLabel">—</strong></div>
+    <div style="margin-top:2px;">Perfil: <strong id="sidebarRoleLabel">—</strong></div>
+    <div style="margin-top:6px; font-size:10.5px; color:var(--ink-soft); opacity:.8;">Versão do arquivo: <strong>2026-08-16-v4</strong></div>
+    <button class="btn btn-ghost" style="margin-top:8px; width:100%; justify-content:center; padding:6px;" onclick="doLogout()">Sair</button>
+  </div>
+</div>
+
+<main>
+
+  <section class="view" id="view-acoes">
+    <h1 class="page-title">Ações Rápidas</h1>
+    <p class="page-sub">Atalhos pensados para o celular no canteiro — toque grande, sem precisar navegar pelo menu.</p>
+    <div id="acoesGrid" class="acoes-grid"></div>
+  </section>
+
+  <section class="view active" id="view-painel">
+    <h1 class="page-title">Painel</h1>
+    <p class="page-sub">Visão geral do quadro de SAVA — o que precisa de atenção esta semana.</p>
+
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr; align-items:start; margin-top:6px;">
+      <div class="card">
+        <h3>&#9888;&#65039; ASO vencendo ou vencido</h3>
+        <div id="painelAso"></div>
+      </div>
+      <div class="card">
+        <h3>&#127874; Aniversário de casa este mês</h3>
+        <div id="painelAniversarios"></div>
+      </div>
+    </div>
+
+    <div class="grid" style="grid-template-columns:1fr 1fr; align-items:start;">
+      <div class="card">
+        <h3>&#128737;&#65039; Treinamento NR vencendo ou vencido</h3>
+        <div id="painelTreino"></div>
+      </div>
+      <div class="card">
+        <h3>&#128221; Contratos de experiência a vencer (próximos 15 dias)</h3>
+        <div id="painelExperiencia"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>&#129530; EPIs a Substituir (C.A. vencido/vencendo ou fim da vida útil)</h3>
+      <div id="painelEpis"></div>
+    </div>
+
+    <div class="card">
+      <h3>&#128721; Solicitações de troca de EPI pendentes</h3>
+      <div id="painelSolicitacoesEpi"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-colaboradores">
+    <h1 class="page-title">Colaboradores</h1>
+    <p class="page-sub">Cadastre uma vez e reaproveite os dados para gerar o Contrato, o Termo de Ciência e acompanhar o checklist de admissão.</p>
+    <div class="banner">&#8505;&#65039; Este cadastro fica salvo automaticamente e é compartilhado apenas entre quem acessa este link de SAVA.</div>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <h3 style="margin:0;">Colaboradores cadastrados</h3>
+        <div class="btn-row" style="margin:0;">
+          <input type="text" id="buscaColab" placeholder="Buscar nome, CPF ou matrícula…" oninput="renderColabTable()" style="font-family:var(--font-ui); font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:7px; min-width:200px;" />
+          <select id="filtroFuncao" onchange="renderColabTable()" style="font-family:var(--font-ui); font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:7px;">
+            <option value="">Todos os cargos</option>
+          </select>
+          <select id="filtroObra" onchange="renderColabTable()" style="font-family:var(--font-ui); font-size:13px; padding:8px 10px; border:1px solid var(--line); border-radius:7px;">
+            <option value="">Todas as obras</option>
+          </select>
+          <button class="btn btn-ghost" id="btnExportCSV" onclick="exportCSV()">&#8681; Exportar CSV</button>
+          <button class="btn btn-primary" id="btnNovoColab" onclick="openColabModal()">+ Novo colaborador</button>
+        </div>
+      </div>
+      <div id="colabTableWrap"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-contrato">
+    <h1 class="page-title">Gerar Contrato e Termo de Ciência</h1>
+    <p class="page-sub">Escolha um colaborador cadastrado — o contrato e o termo de ciência já saem preenchidos, prontos para impressão ou PDF.</p>
+    <div class="card">
+      <div class="grid">
+        <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'contratoColabSelect')" /></div>
+        <div class="field"><label>Colaborador</label><select id="contratoColabSelect" onchange="renderContrato()"></select></div>
+        <div class="field"><label>Documento</label>
+          <select id="contratoDocSelect" onchange="renderContrato()">
+            <option value="contrato">Contrato Individual de Trabalho</option>
+            <option value="termo">Termo de Ciência e Recebimento</option>
+            <option value="ficha">Ficha Cadastral do Colaborador</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card print-card" id="contratoCard" style="display:none;">
+      <div class="doc-toolbar">
+        <span style="font-size:12px; color:var(--ink-soft);">Pré-visualização — confira os campos em destaque antes de imprimir.</span>
+        <div class="btn-row" style="margin:0;">
+          <button class="btn btn-ghost" onclick="copyDoc('contratoSheet')">Copiar texto</button>
+          <button class="btn btn-primary" onclick="printView('contrato')">Imprimir / Salvar PDF</button>
+        </div>
+      </div>
+      <div class="doc-preview-wrap"><div class="doc-sheet" id="contratoSheet"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-checklist">
+    <h1 class="page-title">Checklist de Admissão / Desligamento</h1>
+    <p class="page-sub">Um checklist por colaborador e por tipo de processo. Marque conforme cada etapa é concluída.</p>
+    <div class="card">
+      <div class="grid">
+        <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'checklistColabSelect')" /></div>
+        <div class="field"><label>Colaborador</label><select id="checklistColabSelect" onchange="onChecklistColabChange()"></select></div>
+        <div class="field"><label>Tipo de checklist</label>
+          <select id="checklistTipo" onchange="renderChecklist()">
+            <option value="admissao">Admissão</option>
+            <option value="desligamento">Desligamento</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card" id="checklistCard" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <h3 style="margin:0;">Progresso</h3><span id="checklistPct" style="font-size:12px; font-weight:700; color:var(--accent-dark);"></span>
+      </div>
+      <div class="progress-bar" style="margin-bottom:18px;"><div class="progress-fill" id="checklistBar" style="width:0%;"></div></div>
+      <div id="checklistItems"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-ocorrencias">
+    <h1 class="page-title">Ocorrências Disciplinares</h1>
+    <p class="page-sub">Registro de advertências, suspensões e elogios por colaborador — histórico útil se um caso evoluir para justa causa (Regimento Interno, Capítulo X).</p>
+    <div class="card">
+      <div class="grid">
+        <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'ocorColabSelect')" /></div>
+        <div class="field"><label>Colaborador</label><select id="ocorColabSelect" onchange="renderOcorrencias()"></select></div>
+      </div>
+    </div>
+    <div class="card" id="ocorCard" style="display:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0;">Histórico</h3>
+        <button class="btn btn-primary" onclick="openOcorModal()">+ Nova ocorrência</button>
+      </div>
+      <div id="ocorList"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-epis">
+    <h1 class="page-title">Gestão de EPIs</h1>
+    <p class="page-sub">Solicitação de troca e registro de entrega/devolução (NR-06), no mesmo lugar.</p>
+
+    <div class="epi-tabs" id="epiTabsRow">
+      <button type="button" class="epi-tab-btn active" data-epitab="1" onclick="switchEpiTab(1)">&#128721; Solicitação de Troca</button>
+      <button type="button" class="epi-tab-btn" data-epitab="2" onclick="switchEpiTab(2)">&#9997; Entrega / Devolução</button>
+    </div>
+
+    <div class="epi-tab-content active" data-epitabcontent="1">
+      <p class="field-hint" style="margin-top:0;">Para quando o EPI está danificado, gasto ou vencido — qualquer pessoa da equipe (inclusive o Engenheiro) registra aqui, com foto, e o SESMT avalia e providencia a troca.</p>
+      <div class="card">
+        <div class="grid">
+          <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'epiSolicColabSelect')" /></div>
+          <div class="field"><label>Colaborador</label><select id="epiSolicColabSelect" onchange="renderEpiSolic()"></select></div>
+        </div>
+      </div>
+      <div class="card" id="epiSolicitarCard" style="display:none;">
+        <h3>Nova solicitação</h3>
+        <div class="grid">
+          <div class="field"><label>Nome do EPI</label><input id="solNomeEpi" placeholder="Ex: Capacete de segurança" /></div>
+          <div class="field"><label>Motivo da solicitação</label><input id="solMotivo" placeholder="Ex: Trinca no casco, correia rompida..." /></div>
+        </div>
+        <div class="field" style="margin-top:10px;"><label>Foto do EPI (mostra o desgaste/dano — recomendado)</label>
+          <div class="dropzone" id="solFotoDropzone">
+            <div class="dropzone-icon">&#128247;</div>
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:700;">Arraste a foto aqui</div>
+              <div class="field-hint">ou escolha uma opção abaixo</div>
+              <div class="btn-row" style="margin-top:8px; margin-bottom:0;">
+                <label class="btn btn-ghost" style="cursor:pointer; margin:0;">Escolher da galeria
+                  <input type="file" id="solFoto" accept="image/*" style="display:none;" onchange="previewSolFoto()" />
+                </label>
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('solFotoCapture').click()">&#128248; Tirar foto agora</button>
+                <input type="file" id="solFotoCapture" accept="image/*" capture="environment" style="display:none;" onchange="transferCapturedFile('solFotoCapture','solFoto')" />
+              </div>
+              <div id="solFotoPreview" style="margin-top:8px;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="enviarSolicitacaoEpi()">Enviar solicitação</button>
+          <span id="solMsg" style="font-size:12px; color:var(--accent-dark); align-self:center;"></span>
+        </div>
+      </div>
+
+      <div class="card" id="epiSolicitacoesCard" style="display:none;">
+        <h3>Solicitações deste colaborador — pendentes e histórico</h3>
+        <div id="epiSolicitacoesList"></div>
+      </div>
+    </div>
+
+    <div class="epi-tab-content" data-epitabcontent="2">
+      <div class="banner">&#9989; A assinatura abaixo (ou o registro de recusa com 2 testemunhas) é o que dá valor jurídico ao registro — sem ela, o EPI fica só "anotado", sem prova de entrega.</div>
+      <div class="card">
+        <div class="grid">
+          <div class="field"><label>Buscar</label><input type="text" placeholder="Nome, CPF ou matrícula…" oninput="filterColabSelect(this,'epiColabSelect')" /></div>
+          <div class="field"><label>Colaborador</label><select id="epiColabSelect" onchange="renderEpis()"></select></div>
+        </div>
+      </div>
+      <div class="card" id="epiFormCard" style="display:none;">
+        <h3>Registrar entrega ou devolução</h3>
+        <div class="grid">
+          <div class="field"><label>Nome do EPI</label><input id="epiNome" placeholder="Ex: Capacete de segurança" /></div>
+          <div class="field"><label>C.A. (Certificado de Aprovação)</label><input id="epiCa" placeholder="Ex: 31469" /></div>
+          <div class="field"><label>Validade do C.A.</label><input id="epiCaValidade" type="date" /></div>
+          <div class="field"><label>Vida útil do equipamento (meses)</label><input id="epiVidaUtilMeses" type="number" min="1" placeholder="Ex: 12" /></div>
+          <div class="field"><label>Data</label><input id="epiData" type="date" /></div>
+          <div class="field"><label>Quantidade</label><input id="epiQtd" type="number" min="1" value="1" /></div>
+          <div class="field"><label>Status</label>
+            <select id="epiStatus"><option value="Entregue">Entregue</option><option value="Devolvido">Devolvido</option></select>
+          </div>
+        </div>
+        <div class="field-hint" style="margin-top:6px;">Preencha ao menos um dos dois: Validade do C.A. (data fixa impressa no certificado) ou Vida útil em meses (calculada a partir da data de entrega). Deixe em branco o que não se aplicar.</div>
+
+        <div class="field" style="margin-top:14px;">
+          <label>Assinatura do colaborador</label>
+          <div class="sign-pad-wrap"><canvas id="epiSignCanvas"></canvas></div>
+          <div class="btn-row" style="margin-top:6px; margin-bottom:0;">
+            <button class="btn btn-ghost" type="button" onclick="clearSignature()">&#8635; Limpar assinatura</button>
+          </div>
+        </div>
+
+        <label class="checklist-item" style="padding:10px 4px 4px 4px;">
+          <input type="checkbox" id="epiRecusa" onchange="onEpiRecusaChange()" />
+          <div class="ci-text">Colaborador se recusou a assinar</div>
+        </label>
+        <div class="grid" id="epiTestemunhasWrap" style="display:none;">
+          <div class="field"><label>Testemunha 1</label><input id="epiTest1" placeholder="Nome completo" /></div>
+          <div class="field"><label>Testemunha 2</label><input id="epiTest2" placeholder="Nome completo" /></div>
+        </div>
+
+        <div class="btn-row"><button class="btn btn-primary" onclick="saveEpi()">Registrar</button></div>
+      </div>
+      <div class="card" id="epiListCard" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+          <h3 style="margin:0;">Histórico de EPIs</h3>
+          <button class="btn btn-ghost" onclick="imprimirHistoricoEpis()">&#128196; Imprimir histórico p/ assinatura física</button>
+        </div>
+        <div id="epiList"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-epirecibo">
+    <h1 class="page-title">Recibo de EPI</h1>
+    <div class="card print-card">
+      <div class="doc-toolbar">
+        <span style="font-size:12px; color:var(--ink-soft);">Documento gerado automaticamente — pode ser impresso ou salvo em PDF.</span>
+        <div class="btn-row" style="margin:0;">
+          <button class="btn btn-ghost" onclick="showView('epis')">&larr; Voltar</button>
+          <button class="btn btn-primary" onclick="printView('epirecibo')">Imprimir / Salvar PDF</button>
+        </div>
+      </div>
+      <div class="doc-preview-wrap"><div class="doc-sheet" id="epiReciboSheet"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-obras">
+    <h1 class="page-title">Obras</h1>
+    <p class="page-sub">Cadastro padronizado das obras — usado no campo "Obra / Lotação" do colaborador e no relatório de alocação.</p>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0;">Obras cadastradas</h3>
+        <button class="btn btn-primary" onclick="openObraModal()">+ Nova obra</button>
+      </div>
+      <div id="obrasTableWrap"></div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+        <h3 style="margin:0;">Relatório de alocação</h3>
+        <div class="btn-row" style="margin:0;">
+          <button class="btn btn-ghost" onclick="printRelatorioAlocacao()">Imprimir / Salvar PDF</button>
+          <button class="btn btn-ghost" onclick="exportRelatorioCSV()">&#8681; Exportar CSV</button>
+        </div>
+      </div>
+      <div id="relatorioAlocacaoWrap"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-relatorio-print">
+    <h1 class="page-title">Relatório de Alocação</h1>
+    <div class="card print-card">
+      <div class="doc-preview-wrap"><div class="doc-sheet" id="relatorioSheet"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-padrao">
+    <h1 class="page-title">Regimento Interno &amp; Guia Rápido</h1>
+    <p class="page-sub">Regimento Interno completo e Guia Rápido — sem necessidade de dados de colaborador.</p>
+    <div class="card">
+      <div class="grid">
+        <div class="field"><label>Documento</label>
+          <select id="padraoDocSelect" onchange="renderPadrao()">
+            <option value="regimento">Regimento Interno (completo — 37 artigos)</option>
+            <option value="guia">Guia Rápido do Colaborador</option>
+          </select>
+        </div>
+      </div>
+      <div class="banner" style="margin-top:16px; margin-bottom:0;">&#128161; Texto completo, pronto para consulta ou impressão. Para assinatura formal com Termo de Ciência anexo, use o arquivo .docx já entregue.</div>
+    </div>
+    <div class="card print-card" id="padraoCard">
+      <div class="doc-toolbar">
+        <span style="font-size:12px; color:var(--ink-soft);">&nbsp;</span>
+        <div class="btn-row" style="margin:0;"><button class="btn btn-primary" onclick="printView('padrao')">Imprimir / Salvar PDF</button></div>
+      </div>
+      <div class="doc-preview-wrap"><div class="doc-sheet" id="padraoSheet"></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-empresa">
+    <h1 class="page-title">Dados da Empresa</h1>
+    <p class="page-sub">Esses dados preenchem automaticamente o cabeçalho dos contratos gerados. A cor do sistema pode ser ajustada a partir da logo.</p>
+    <div class="card">
+      <h3>Dados cadastrais</h3>
+      <div class="grid">
+        <div class="field"><label>Razão social</label><input id="empRazaoSocial" /></div>
+        <div class="field"><label>CNPJ</label><input id="empCnpj" placeholder="00.000.000/0001-00" /></div>
+        <div class="field" style="grid-column:1 / -1;"><label>Endereço da sede</label><input id="empEndereco" placeholder="Rua, número, bairro, cidade/UF" /></div>
+        <div class="field"><label>Cidade/UF (assinatura dos documentos)</label><input id="empCidade" /></div>
+      </div>
+      <div class="grid" style="margin-top:16px;">
+        <div class="field">
+          <label>Logo da empresa</label>
+          <input type="file" id="empLogoFile" accept="image/*" onchange="handleLogoUpload(event)" />
+          <span class="field-hint">PNG ou JPG. A cor do sistema é sugerida a partir da imagem.</span>
+          <div class="logo-preview-row">
+            <div class="logo-preview-box" id="empLogoPreview">—</div>
+            <button class="btn btn-ghost" type="button" onclick="removeLogo()">Remover logo</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Cor do sistema</label>
+          <input type="color" id="empAccentColor" />
+          <span class="field-hint" id="accentHint">Cor atual.</span>
+          <div class="swatch-row" id="suggestedSwatches"></div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="saveEmpresaForm()">Salvar dados</button>
+        <span id="empSaveMsg" style="font-size:12px; color:var(--accent-dark); align-self:center;"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="view-usuarios">
+    <h1 class="page-title">Usuários</h1>
+    <p class="page-sub">Defina o perfil de acesso de cada pessoa. <strong>Admin</strong> vê e edita tudo. <strong>Engenheiro/Mestre de Obras</strong> vê apenas sua equipe (obra), sem salário nem documentos sensíveis. <strong>SESMT</strong> foca em EPIs, ocorrências e checklist.</p>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="margin:0;">Usuários cadastrados</h3>
+        <button class="btn btn-primary" onclick="openUsuarioModal()">+ Novo usuário</button>
+      </div>
+      <div id="usuariosTableWrap"></div>
+      <div class="banner" style="margin-top:14px; margin-bottom:0;">&#8505;&#65039; A pessoa precisa já ter um login criado no Firebase Authentication (Authentication → Users) com este mesmo e-mail — cadastrar aqui só define o que ela pode ver e fazer dentro do sistema.</div>
+    </div>
+  </section>
+
+</main>
+
+<div class="modal-backdrop" id="usuarioModalBackdrop">
+  <div class="modal">
+    <h3 id="usuarioModalTitle">Novo usuário</h3>
+    <input type="hidden" id="usuarioEmailOriginal" />
+    <div class="grid full">
+      <div class="field"><label>E-mail (o mesmo do login)</label><input id="usuarioEmail" placeholder="nome@empresa.com" /></div>
+      <div class="field"><label>Nome</label><input id="usuarioNome" placeholder="Nome completo" /></div>
+      <div class="field"><label>Perfil de acesso</label>
+        <select id="usuarioPapel" onchange="onUsuarioPapelChange()">
+          <option value="admin">Admin / RH</option>
+          <option value="engenheiro">Engenheiro / Mestre de Obras</option>
+          <option value="sesmt">SESMT (Técnico de Segurança)</option>
+        </select>
+      </div>
+      <div class="field" id="usuarioObraWrap" style="display:none;"><label>Obra (equipe que ele vai enxergar)</label>
+        <select id="usuarioObra"></select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnSalvarUsuario" onclick="saveUsuario()">Salvar</button>
+      <button class="btn btn-ghost" onclick="closeUsuarioModal()">Cancelar</button>
+      <span id="usuarioSaveMsg" style="font-size:12px; color:var(--danger); align-self:center;"></span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="colabModalBackdrop">
+  <div class="modal" style="max-width:760px;">
+    <h3 id="colabModalTitle">Novo colaborador</h3>
+    <input type="hidden" id="colabId" />
+    <div class="dropzone" id="fotoDropzone" style="margin-bottom:14px;">
+      <div class="logo-preview-box" id="fotoPreview" style="width:72px; height:72px; border-radius:50%; flex-shrink:0;">&#128100;</div>
+      <div style="flex:1;">
+        <label style="display:block; font-size:11px; font-weight:700; color:var(--ink-soft); text-transform:uppercase; margin-bottom:5px;">Foto do colaborador</label>
+        <div class="field-hint">Arraste uma foto aqui, ou escolha uma opção abaixo</div>
+        <div class="btn-row" style="margin-top:8px; margin-bottom:0;">
+          <label class="btn btn-ghost" style="cursor:pointer; margin:0;">Escolher da galeria
+            <input type="file" id="fotoFile" accept="image/*" onchange="uploadFoto()" style="display:none;" />
+          </label>
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('fotoFileCapture').click()">&#128248; Tirar foto agora</button>
+          <input type="file" id="fotoFileCapture" accept="image/*" capture="environment" style="display:none;" onchange="transferCapturedFile('fotoFileCapture','fotoFile')" />
+        </div>
+        <div id="fotoHint" class="field-hint" style="display:none;">Você já pode adicionar a foto agora — não precisa salvar antes.</div>
+      </div>
+    </div>
+
+    <div class="modal-tabs">
+      <button type="button" class="modal-tab-btn active" data-tab="1" onclick="switchColabTab(1)">1. Dados Pessoais</button>
+      <button type="button" class="modal-tab-btn" data-tab="2" onclick="switchColabTab(2)">2. Contratuais &amp; Lotação</button>
+      <button type="button" class="modal-tab-btn" data-tab="3" onclick="switchColabTab(3)">3. Dependentes</button>
+      <button type="button" class="modal-tab-btn" data-tab="4" onclick="switchColabTab(4)">4. Documentos</button>
+    </div>
+
+    <div class="modal-tab-content active" data-tabcontent="1">
+      <div class="grid">
+        <div class="field" style="grid-column:1 / -1;"><label>Nome completo</label><input id="cNome" /></div>
+        <div class="field"><label>CPF</label><input id="cCpf" placeholder="000.000.000-00" oninput="this.value=maskCPF(this.value)" maxlength="14" /></div>
+        <div class="field"><label>RG</label><input id="cRg" placeholder="00.000.000-0" oninput="this.value=maskRG(this.value)" maxlength="12" /></div>
+        <div class="field"><label>PIS / PASEP / NIS</label><input id="cPis" placeholder="000.00000.00-0" /></div>
+        <div class="field"><label>Sexo</label>
+          <select id="cSexo"><option value="">Selecione</option><option value="Masculino">Masculino</option><option value="Feminino">Feminino</option></select>
+        </div>
+        <div class="field"><label>Nacionalidade</label><input id="cNacionalidade" value="brasileira" /></div>
+        <div class="field"><label>Estado civil</label>
+          <select id="cEstadoCivil">
+            <option value="">Selecione</option>
+            <option value="Solteiro(a)">Solteiro(a)</option>
+            <option value="Casado(a)">Casado(a)</option>
+            <option value="União Estável">União Estável</option>
+            <option value="Divorciado(a)">Divorciado(a)</option>
+            <option value="Separado(a) judicialmente">Separado(a) judicialmente</option>
+            <option value="Viúvo(a)">Viúvo(a)</option>
+          </select>
+        </div>
+        <div class="field"><label>CEP</label>
+          <input id="cCep" placeholder="00000-000" maxlength="9" oninput="this.value=maskCEP(this.value)" onblur="buscarCEP()" />
+          <span class="field-hint" id="cepHint"></span>
+        </div>
+        <div class="field" style="grid-column:1 / -1;"><label>Endereço completo</label><input id="cEndereco" placeholder="Preenchido automaticamente pelo CEP — complete com número/complemento" /></div>
+      </div>
+    </div>
+
+    <div class="modal-tab-content" data-tabcontent="2">
+      <div class="grid">
+        <div class="field"><label>Função / cargo</label>
+          <select id="cFuncao" onchange="onCargoChange()">
+            <option value="Pedreiro">Pedreiro</option>
+            <option value="Servente">Servente</option>
+            <option value="Carpinteiro">Carpinteiro</option>
+            <option value="Armador">Armador</option>
+            <option value="Eletricista">Eletricista</option>
+            <option value="Encanador / Bombeiro Hidráulico">Encanador / Bombeiro Hidráulico</option>
+            <option value="Pintor">Pintor</option>
+            <option value="Mestre de Obras">Mestre de Obras</option>
+            <option value="Técnico de Segurança do Trabalho">Técnico de Segurança do Trabalho</option>
+            <option value="Engenheiro(a)">Engenheiro(a)</option>
+            <option value="Auxiliar Administrativo">Auxiliar Administrativo</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="field" id="cFuncaoOutraWrap" style="display:none;"><label>Especifique o cargo</label><input id="cFuncaoOutra" placeholder="Digite o cargo" /></div>
+        <div class="field"><label>CBO (Classificação Brasileira de Ocupações)</label><input id="cCbo" placeholder="Ex: 7152-10" /></div>
+        <div class="field"><label>Obra / Lotação atual</label>
+          <select id="cObra" onchange="onObraSelectChange()"></select>
+        </div>
+        <div class="field" id="cObraOutraWrap" style="display:none;"><label>Especifique a obra</label><input id="cObraOutra" placeholder="Digite o nome da obra" /></div>
+        <div class="field"><label>Número de cadastro (matrícula)</label>
+          <div style="display:flex; gap:6px;">
+            <input id="cMatricula" placeholder="Ex: 0042" style="flex:1;" />
+            <button class="btn btn-ghost" type="button" style="padding:9px 12px;" onclick="sugerirMatricula()" title="Sugerir próximo número">&#8635;</button>
+          </div>
+        </div>
+        <div class="field"><label>Salário mensal (R$)</label><input id="cSalario" placeholder="Ex: 2.400,00" /></div>
+        <div class="field"><label>Salário por extenso</label><input id="cSalarioExtenso" placeholder="Ex: dois mil e quatrocentos reais" /></div>
+        <div class="field"><label>Data de admissão</label><input id="cData" type="date" /></div>
+        <div class="field"><label>Status</label>
+          <select id="cStatus"><option value="ativo">Ativo</option><option value="admissao">Em admissão</option><option value="desligado">Desligado</option></select>
+        </div>
+        <div class="field"><label>Tipo de contrato</label>
+          <select id="cTipoContrato">
+            <option value="indeterminado">Prazo indeterminado</option>
+            <option value="experiencia45">Experiência — 45 dias</option>
+            <option value="experiencia90">Experiência — 45+45 dias</option>
+          </select>
+        </div>
+        <div class="field"><label>Fim do período de experiência</label><input id="cFimExperiencia" type="date" /></div>
+        <div class="field"><label>Validade do ASO periódico</label><input id="cAsoValidade" type="date" /></div>
+        <div class="field"><label>Validade do treinamento NR (18/35 etc.)</label><input id="cTreinoValidade" type="date" /></div>
+        <div class="field field-hint" style="align-self:flex-end; padding-bottom:9px;">Deixe em branco o que não se aplicar.</div>
+      </div>
+    </div>
+
+    <div class="modal-tab-content" data-tabcontent="3">
+      <p class="field-hint" style="margin-top:0;">Usado para fins de Salário-Família e outros benefícios. Cada dependente pode ter um documento anexado (certidão de nascimento, carteira de vacinação etc.).</p>
+      <div class="grid">
+        <div class="field"><label>Nome do dependente</label><input id="depNome" /></div>
+        <div class="field"><label>Parentesco</label>
+          <select id="depParentesco">
+            <option value="Filho(a)">Filho(a)</option>
+            <option value="Cônjuge">Cônjuge</option>
+            <option value="Enteado(a)">Enteado(a)</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </div>
+        <div class="field"><label>Data de nascimento</label><input id="depNascimento" type="date" /></div>
+        <div class="field"><label>Documento (opcional)</label>
+          <div class="dropzone" id="depDocDropzone">
+            <div class="dropzone-icon">&#128196;</div>
+            <div style="flex:1;">
+              <div style="font-size:12.5px;">Arraste aqui, ou escolha abaixo</div>
+              <div class="btn-row" style="margin-top:6px; margin-bottom:0;">
+                <label class="btn btn-ghost" style="cursor:pointer; margin:0; padding:6px 10px; font-size:11.5px;">Galeria
+                  <input type="file" id="depDocFile" accept="image/*,.pdf" style="display:none;" />
+                </label>
+                <button type="button" class="btn btn-ghost" style="padding:6px 10px; font-size:11.5px;" onclick="document.getElementById('depDocFileCapture').click()">&#128248; Foto agora</button>
+                <input type="file" id="depDocFileCapture" accept="image/*" capture="environment" style="display:none;" onchange="transferCapturedFile('depDocFileCapture','depDocFile')" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" type="button" onclick="addDependente()">&#8595; Adicionar dependente</button>
+        <span id="depMsg" style="font-size:12px; color:var(--accent-dark); align-self:center;"></span>
+      </div>
+      <div id="depList" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="modal-tab-content" data-tabcontent="4">
+      <div id="docAnexosWrap" style="display:none;">
+        <div class="grid">
+          <div class="field"><label>Tipo de documento</label>
+            <select id="docTipo">
+              <option value="CNH">CNH</option>
+              <option value="ASO">ASO</option>
+              <option value="Comprovante de Endereço">Comprovante de Endereço</option>
+              <option value="RG/CPF">RG/CPF</option>
+              <option value="Certificado de NR">Certificado de NR</option>
+              <option value="Outro">Outro</option>
+            </select>
+          </div>
+        </div>
+        <div class="dropzone" id="docDropzone" style="margin-top:6px;">
+          <div class="dropzone-icon">&#128196;</div>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:700;">Arraste o arquivo aqui</div>
+            <div class="field-hint">Foto ou PDF — escolha o tipo de documento acima antes de enviar</div>
+            <div class="btn-row" style="margin-top:8px; margin-bottom:0;">
+              <label class="btn btn-ghost" style="cursor:pointer; margin:0;">Escolher da galeria / PDF
+                <input type="file" id="docFile" accept="image/*,.pdf" style="display:none;" onchange="uploadDocumento()" />
+              </label>
+              <button type="button" class="btn btn-ghost" onclick="document.getElementById('docFileCapture').click()">&#128248; Tirar foto agora</button>
+              <input type="file" id="docFileCapture" accept="image/*" capture="environment" style="display:none;" onchange="transferCapturedFile('docFileCapture','docFile')" />
+            </div>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" type="button" onclick="uploadDocumento()">&#8593; Enviar documento</button>
+          <span id="docUploadMsg" style="font-size:12px; color:var(--accent-dark); align-self:center;"></span>
+        </div>
+        <div id="docList" style="margin-top:10px;"></div>
+      </div>
+      <div id="docAnexosHint" class="field-hint" style="display:none;">Você já pode anexar documentos agora — não precisa salvar antes.</div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveColaborador()">Salvar</button>
+      <button class="btn btn-ghost" onclick="closeColabModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="ocorModalBackdrop">
+  <div class="modal">
+    <h3>Nova ocorrência</h3>
+    <input type="hidden" id="ocorId" />
+    <div class="grid full">
+      <div class="field"><label>Tipo</label>
+        <select id="ocorTipo">
+          <option value="Advertência verbal">Advertência verbal</option>
+          <option value="Advertência escrita">Advertência escrita</option>
+          <option value="Suspensão disciplinar">Suspensão disciplinar</option>
+          <option value="Elogio">Elogio / registro positivo</option>
+          <option value="Solicitação de Desligamento">Solicitação de Desligamento (para análise do RH)</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="field"><label>Data</label><input id="ocorData" type="date" /></div>
+      <div class="field"><label>Motivo / descrição</label><textarea id="ocorMotivo" placeholder="Descreva o ocorrido — cite o artigo do Regimento Interno aplicável, se houver"></textarea></div>
+      <div class="field"><label>Fotos (evidência — opcional, pode escolher várias)</label>
+        <div class="dropzone" id="ocorFotosDropzone">
+          <div class="dropzone-icon">&#128247;</div>
+          <div style="flex:1;">
+            <div style="font-size:13px; font-weight:700;">Arraste as fotos aqui</div>
+            <div class="field-hint">pode escolher várias de uma vez</div>
+            <div class="btn-row" style="margin-top:8px; margin-bottom:0;">
+              <label class="btn btn-ghost" style="cursor:pointer; margin:0;">Escolher da galeria
+                <input type="file" id="ocorFotos" accept="image/*" multiple style="display:none;" onchange="previewOcorFotos()" />
+              </label>
+              <button type="button" class="btn btn-ghost" onclick="document.getElementById('ocorFotosCapture').click()">&#128248; Tirar foto agora</button>
+              <input type="file" id="ocorFotosCapture" accept="image/*" capture="environment" style="display:none;" onchange="transferCapturedFileAppend('ocorFotosCapture','ocorFotos')" />
+            </div>
+            <div id="ocorFotosPreview" style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveOcorrencia()">Registrar</button>
+      <button class="btn btn-ghost" onclick="closeOcorModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="obraModalBackdrop">
+  <div class="modal">
+    <h3 id="obraModalTitle">Nova obra</h3>
+    <input type="hidden" id="obraId" />
+    <div class="grid full">
+      <div class="field"><label>Nome da obra</label><input id="obraNome" placeholder="Ex: Residencial Alfa — Torre 2" /></div>
+      <div class="field"><label>Endereço (opcional)</label><input id="obraEndereco" placeholder="Rua, número, bairro, cidade/UF" /></div>
+      <div class="field"><label>Status</label>
+        <select id="obraStatus"><option value="ativa">Ativa</option><option value="concluida">Concluída</option></select>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveObra()">Salvar</button>
+      <button class="btn btn-ghost" onclick="closeObraModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   EMPRESA FIXA DESTE LINK — não há seletor: este arquivo pertence a uma só empresa
+========================================================================= */
+const DEFAULT_LOGO = "data:image/png;base64,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";
+const DEFAULT_EMPRESA = {
+  nome: "SAVA CONSTRUTORA LTDA.",
+  cnpj: "",
+  endereco: "",
+  cidade: "Aracaju/SE",
+  logo: DEFAULT_LOGO,
+  accent: "#001C7D",
+};
+
+const CHECKLIST_ITEMS_ADMISSAO = [
+  { id:1, texto:"Conferência de documentos (CTPS, CPF, RG, comprovante de residência, ASO admissional)", resp:"RH" },
+  { id:2, texto:"Assinatura do Contrato Individual de Trabalho", resp:"RH" },
+  { id:3, texto:"Entrega e treinamento de uso dos EPIs (registrar ficha de EPI)", resp:"Técnico de Segurança / SESMT" },
+  { id:4, texto:"Integração de segurança: NR-01, NR-18 e, se aplicável, NR-35", resp:"Técnico de Segurança / SESMT" },
+  { id:5, texto:"Entrega do Regimento Interno e do Guia Rápido do Colaborador", resp:"RH" },
+  { id:6, texto:"Leitura e assinatura do Termo de Ciência e Recebimento", resp:"RH + Colaborador" },
+  { id:7, texto:"Cadastro no eSocial e registro em livro/ficha de empregados", resp:"RH / Departamento Pessoal" },
+  { id:8, texto:"Apresentação ao encarregado(a) responsável pela frente de trabalho", resp:"Engenheiro / Mestre de Obras" },
+  { id:9, texto:"Coleta de dados bancários e cadastro de dependentes (INSS/IR)", resp:"RH" },
+];
+const CHECKLIST_ITEMS_DESLIGAMENTO = [
+  { id:1, texto:"Exame Demissional", resp:"RH / Medicina do Trabalho" },
+  { id:2, texto:"Aviso Prévio Assinado", resp:"RH" },
+  { id:3, texto:"Devolução de EPIs", resp:"Técnico de Segurança / SESMT" },
+  { id:4, texto:"Devolução de Ferramentas", resp:"Almoxarifado / Encarregado" },
+  { id:5, texto:"Baixa na CTPS", resp:"RH / Departamento Pessoal" },
+  { id:6, texto:"Chave do FGTS", resp:"RH / Departamento Pessoal" },
+];
+function checklistItemsFor(tipo){ return tipo==='desligamento' ? CHECKLIST_ITEMS_DESLIGAMENTO : CHECKLIST_ITEMS_ADMISSAO; }
+function checklistFieldFor(tipo){ return tipo==='desligamento' ? 'checklistDesligamento' : 'checklist'; }
+
+let empresa = JSON.parse(JSON.stringify(DEFAULT_EMPRESA));
+let colaboradores = [];
+let pendingLogo = null;
+
+/* =========================================================================
+   FIREBASE — configure aqui com os dados do SEU projeto (veja o guia enviado)
+========================================================================= */
+const firebaseConfig = {
+  apiKey: "AIzaSyCEO8QXHvOUhnOVA1YVuj9GUzk_fzHbK28",
+  authDomain: "sava-rh.firebaseapp.com",
+  projectId: "sava-rh",
+  storageBucket: "sava-rh.firebasestorage.app",
+  messagingSenderId: "762911282309",
+  appId: "1:762911282309:web:ffe0f2820c649ad01505ec",
+};
+let auth = null;
+let db = null;
+let storage = null;
+function firebaseConfigured(){ return !firebaseConfig.apiKey.startsWith('COLE_AQUI'); }
+function initFirebase(){
+  if(!firebaseConfigured() || !window.firebase) return false;
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+    storage = firebase.storage();
+    return true;
+  }catch(e){
+    console.error('Erro ao iniciar o Firebase:', e);
+    return false;
+  }
+}
+
+/* =========================================================================
+   PERFIS DE ACESSO (RBAC) — edite a lista abaixo com o(s) e-mail(s) que
+   devem ser Admin mesmo antes de qualquer cadastro em "Usuários" (evita
+   ficar sem ninguém com acesso total no primeiro uso do sistema).
+========================================================================= */
+const ADMIN_EMAILS_PADRAO = ["vitorbessa@savaconstrutora.com.br"];
+let currentUserRole = null; // 'admin' | 'engenheiro' | 'sesmt' | null (sem papel definido)
+let currentUserObra = '';   // usado para restringir a equipe do Engenheiro
+
+async function loadUserRole(){
+  const email = (auth && auth.currentUser && auth.currentUser.email) || '';
+  if(ADMIN_EMAILS_PADRAO.map(e=>e.toLowerCase()).includes(email.toLowerCase())){
+    currentUserRole = 'admin'; currentUserObra = '';
+    return;
+  }
+  try{
+    const doc = await comTempoLimite(db.collection('usuarios').doc(email).get());
+    if(doc.exists){
+      currentUserRole = doc.data().papel || null;
+      currentUserObra = doc.data().obra || '';
+    } else {
+      currentUserRole = null; currentUserObra = '';
+    }
+  }catch(e){ console.error('Erro ao carregar papel do usuário:', e); currentUserRole = null; }
+}
+
+/* ---------- AUDITORIA — quem/quando salvou cada registro ---------- */
+/* ---------- Trava operações que "ficam penduradas" sem erro nenhum ---------- */
+function comTempoLimite(promessa, segundos){
+  segundos = segundos || 45;
+  // Mesmo que o tempo limite dispare, registra no Console o que a operação de verdade fez (ajuda a diagnosticar)
+  promessa.then(
+    r=>console.log('[Firebase] A operação concluiu (mesmo que tenha demorado):', r),
+    e=>console.error('[Firebase] A operação foi rejeitada (mesmo que tenha demorado):', e)
+  );
+  return Promise.race([
+    promessa,
+    new Promise((_, reject)=>setTimeout(()=>reject({ code:'client/timeout', message:'A operação demorou mais que '+segundos+'s sem responder.' }), segundos*1000)),
+  ]);
+}
+
+function auditFields(isCreate){
+  const email = (auth && auth.currentUser && auth.currentUser.email) || 'desconhecido';
+  const fields = { updatedBy: email, updatedAt: new Date().toISOString() };
+  if(isCreate) fields.createdBy = email;
+  return fields;
+}
+
+/* ---------- STORAGE (Firestore — compartilhado de verdade entre a equipe) ---------- */
+async function loadAll(){
+  if(!db){ showConfigWarning(); return; }
+  try{
+    const doc = await db.collection('config').doc('empresa').get();
+    if(doc.exists){ empresa = { ...DEFAULT_EMPRESA, ...doc.data() }; }
+    else{ await db.collection('config').doc('empresa').set(empresa); }
+  }catch(e){ console.error('config/empresa', e); }
+
+  try{
+    const snap = await db.collection('colaboradores').orderBy('nome').get();
+    colaboradores = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }catch(e){ console.error('colaboradores', e); colaboradores = []; }
+
+  await loadObras();
+  await loadTodosEpis();
+  await loadSolicitacoesEpi();
+
+  applyTheme(empresa.accent || "#001C7D");
+  renderAllViews();
+}
+async function saveEmpresaStore(){
+  if(!db) return;
+  try{ await db.collection('config').doc('empresa').set(empresa); }
+  catch(e){ console.error(e); alert(traduzErroDados(e)); }
+}
+async function getChecklist(colabId, tipo){
+  const c = colaboradores.find(x=>x.id===colabId);
+  return (c && c[checklistFieldFor(tipo)]) || {};
+}
+async function setChecklist(colabId, state, tipo){
+  if(!db) return;
+  try{
+    const campo = checklistFieldFor(tipo);
+    await db.collection('colaboradores').doc(colabId).update({ [campo]: state, ...auditFields(false) });
+    const c = colaboradores.find(x=>x.id===colabId);
+    if(c) c[campo] = state;
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); }
+}
+
+function showConfigWarning(){
+  document.querySelector('main').innerHTML =
+    '<div class="card" style="max-width:640px; margin-top:40px;">'+
+    '<h3 style="color:#a8341f;">Conexão com o banco de dados não configurada</h3>'+
+    '<p style="font-size:13.5px; line-height:1.6;">Este arquivo ainda não foi ligado ao Firebase. Abra o arquivo em um editor de texto, encontre o bloco <code>firebaseConfig</code> perto do início do <code>&lt;script&gt;</code>, e cole os dados do seu projeto — veja o passo a passo que te enviei junto com este arquivo.</p>'+
+    '</div>';
+}
+
+
+/* ---------- COR ---------- */
+function hexToRgb(hex){ hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+function rgbToHex(r,g,b){ return '#'+[r,g,b].map(x=>Math.max(0,Math.min(255,Math.round(x))).toString(16).padStart(2,'0')).join(''); }
+function mix(hex,t,amt){ const c=hexToRgb(hex); return rgbToHex(c.r+(t.r-c.r)*amt, c.g+(t.g-c.g)*amt, c.b+(t.b-c.b)*amt); }
+function tint(hex,amt){ return mix(hex,{r:255,g:255,b:255},amt); }
+function shadeColor(hex,amt){ return mix(hex,{r:0,g:0,b:0},amt); }
+function luminance(hex){ const c=hexToRgb(hex); return (0.299*c.r+0.587*c.g+0.114*c.b)/255; }
+function textOn(hex){ return luminance(hex) > 0.6 ? '#1c1c1c' : '#ffffff'; }
+
+function extractPalette(dataUrl){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const size=48; const canvas=document.createElement('canvas'); canvas.width=size; canvas.height=size;
+        const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,size,size);
+        const data=ctx.getImageData(0,0,size,size).data; const buckets={};
+        for(let i=0;i<data.length;i+=4){
+          const a=data[i+3]; if(a<128) continue;
+          const r=data[i],g=data[i+1],b=data[i+2];
+          const max=Math.max(r,g,b), min=Math.min(r,g,b);
+          if(min>225 || max<35 || (max-min)<18) continue;
+          const key=[Math.round(r/24)*24,Math.round(g/24)*24,Math.round(b/24)*24].join(',');
+          buckets[key]=(buckets[key]||0)+1;
+        }
+        const sorted=Object.entries(buckets).sort((a,b)=>b[1]-a[1]);
+        const colors=sorted.slice(0,4).map(([key])=>{ const [r,g,b]=key.split(',').map(Number); return rgbToHex(r,g,b); });
+        resolve(colors.length ? colors : ['#3a3a3a']);
+      }catch(err){ resolve(['#3a3a3a']); }
+    };
+    img.onerror = ()=>resolve(['#3a3a3a']);
+    img.src = dataUrl;
+  });
+}
+function applyTheme(hex){
+  const root = document.documentElement.style;
+  root.setProperty('--accent', hex);
+  root.setProperty('--accent-soft', tint(hex,0.88));
+  root.setProperty('--accent-dark', shadeColor(hex,0.35));
+  root.setProperty('--accent-text', textOn(hex));
+}
+
+/* ---------- NAV ---------- */
+function renderBrand(){
+  const el = document.getElementById('brandRow');
+  if(empresa.logo){ el.innerHTML = '<img class="brand-logo-img" src="'+empresa.logo+'" alt="logo" />'; }
+  else { el.innerHTML = '<div class="brand-logo-text">'+escapeHtml((empresa.nome||'').split(' ')[0])+'</div>'; }
+}
+function showView(name){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  document.querySelectorAll('nav.nav button').forEach(b=>b.classList.toggle('active', b.dataset.view===name));
+  if(name==='painel') renderPainel();
+  if(name==='acoes') renderAcoesRapidas();
+  if(name==='contrato') renderContrato();
+  if(name==='checklist') renderChecklist();
+  if(name==='ocorrencias') renderOcorrencias();
+  if(name==='epis'){ aplicarSigiloEpis(); renderEpiSolic(); renderEpis(); }
+  if(name==='obras'){ renderObrasTable(); renderRelatorioAlocacao(); }
+  if(name==='padrao') renderPadrao();
+  if(name==='empresa') renderEmpresaForm();
+  if(name==='usuarios') renderUsuariosTable();
+}
+function renderAllViews(){
+  renderBrand(); renderPainel(); renderColabTable(); populateColabSelects(); renderContrato(); renderPadrao(); renderEmpresaForm(); renderObrasTable(); renderRelatorioAlocacao();
+}
+
+/* =========================================================================
+   APLICAÇÃO DO PERFIL NA INTERFACE (esconde abas e campos sensíveis)
+========================================================================= */
+const VIEWS_POR_PAPEL = {
+  admin: null, // null = vê tudo
+  sesmt: ['painel','acoes','colaboradores','checklist','ocorrencias','epis','padrao'],
+  engenheiro: ['painel','acoes','colaboradores','ocorrencias','epis','padrao'],
+};
+const CAMPOS_SIGILOSOS_IDS = ['cSalario','cSalarioExtenso','cPis']; // ficam ocultos para quem não é admin
+
+function applyRoleUI(){
+  const permitido = VIEWS_POR_PAPEL[currentUserRole];
+  document.querySelectorAll('nav.nav button[data-view]').forEach(btn=>{
+    const v = btn.dataset.view;
+    btn.style.display = (permitido===null || permitido.includes(v)) ? '' : 'none';
+  });
+  document.getElementById('sidebarRoleLabel') && (document.getElementById('sidebarRoleLabel').textContent = rotuloPapel(currentUserRole));
+}
+function rotuloPapel(papel){
+  return papel==='admin' ? 'Admin/RH' : papel==='sesmt' ? 'SESMT' : papel==='engenheiro' ? 'Engenheiro' : '—';
+}
+function aplicarSigiloEpis(){
+  const podeEntregar = currentUserRole==='admin' || currentUserRole==='sesmt';
+  const tabEntrega = document.querySelector('.epi-tab-btn[data-epitab="2"]');
+  if(tabEntrega) tabEntrega.style.display = podeEntregar ? '' : 'none';
+  // Se o Engenheiro estiver com a aba de entrega ativa (ex: veio de um link antigo), volta para a de solicitação
+  if(!podeEntregar) switchEpiTab(1);
+}
+function aplicarSigiloNoModal(){
+  const podeVerSalario = currentUserRole==='admin';
+  CAMPOS_SIGILOSOS_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el && el.closest('.field')) el.closest('.field').style.display = podeVerSalario ? '' : 'none';
+  });
+  document.getElementById('docAnexosWrap').style.display = podeVerSalario || currentUserRole==='sesmt' ? 'block' : 'none';
+
+  const abaDependentesBtn = document.querySelector('.modal-tab-btn[data-tab="3"]');
+  if(abaDependentesBtn) abaDependentesBtn.style.display = podeVerSalario ? '' : 'none';
+
+  const somenteLeitura = currentUserRole==='engenheiro';
+  document.querySelectorAll('#colabModalBackdrop input, #colabModalBackdrop select, #colabModalBackdrop textarea').forEach(el=>{
+    el.disabled = somenteLeitura;
+  });
+  const btnSalvar = document.querySelector('#colabModalBackdrop .btn-primary');
+  if(btnSalvar) btnSalvar.style.display = somenteLeitura ? 'none' : '';
+}
+
+/* ---------- PAINEL (dashboard) ---------- */
+function daysUntil(iso){
+  if(!iso) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const target = new Date(iso+'T00:00:00');
+  return Math.round((target-today)/86400000);
+}
+function renderPainel(){
+  const ativos = colaboradores.filter(c=>c.status==='ativo').length;
+  const emAdmissao = colaboradores.filter(c=>c.status==='admissao').length;
+  const desligados = colaboradores.filter(c=>c.status==='desligado').length;
+  document.getElementById('kpiRow').innerHTML = [
+    ['Total cadastrados', colaboradores.length],
+    ['Ativos', ativos],
+    ['Em admissão', emAdmissao],
+    ['Desligados', desligados],
+  ].map(([label,num])=>'<div class="kpi-card"><div class="kpi-num">'+num+'</div><div class="kpi-label">'+label+'</div></div>').join('');
+
+  // ASO vencendo/vencido (30 dias)
+  const asoList = colaboradores
+    .filter(c=>c.asoValidade && c.status!=='desligado')
+    .map(c=>({c, dias:daysUntil(c.asoValidade)}))
+    .filter(x=>x.dias!==null && x.dias<=30)
+    .sort((a,b)=>a.dias-b.dias);
+  document.getElementById('painelAso').innerHTML = asoList.length ? asoList.map(x=>{
+    const pill = x.dias<0 ? '<span class="alert-pill late">Vencido há '+Math.abs(x.dias)+'d</span>' : '<span class="alert-pill soon">Vence em '+x.dias+'d</span>';
+    return '<div class="alert-row"><span>'+escapeHtml(x.c.nome)+'</span>'+pill+'</div>';
+  }).join('') : '<div class="field-hint">Nenhum ASO vencendo nos próximos 30 dias.</div>';
+
+  // Aniversário de casa (mês atual, baseado na data de admissão)
+  const hoje = new Date();
+  const anivList = colaboradores
+    .filter(c=>c.dataAdmissao && c.status!=='desligado')
+    .map(c=>{
+      const d = new Date(c.dataAdmissao+'T00:00:00');
+      const anos = hoje.getFullYear() - d.getFullYear();
+      return { c, mes:d.getMonth(), dia:d.getDate(), anos };
+    })
+    .filter(x=>x.mes===hoje.getMonth() && x.anos>0)
+    .sort((a,b)=>a.dia-b.dia);
+  document.getElementById('painelAniversarios').innerHTML = anivList.length ? anivList.map(x=>
+    '<div class="alert-row"><span>'+escapeHtml(x.c.nome)+'</span><span class="alert-pill soon">'+x.anos+' ano(s) — dia '+x.dia+'</span></div>'
+  ).join('') : '<div class="field-hint">Ninguém completa tempo de casa este mês.</div>';
+
+  // Treinamento NR vencendo/vencido (30 dias)
+  const treinoList = colaboradores
+    .filter(c=>c.treinoValidade && c.status!=='desligado')
+    .map(c=>({c, dias:daysUntil(c.treinoValidade)}))
+    .filter(x=>x.dias!==null && x.dias<=30)
+    .sort((a,b)=>a.dias-b.dias);
+  document.getElementById('painelTreino').innerHTML = treinoList.length ? treinoList.map(x=>{
+    const pill = x.dias<0 ? '<span class="alert-pill late">Vencido há '+Math.abs(x.dias)+'d</span>' : '<span class="alert-pill soon">Vence em '+x.dias+'d</span>';
+    return '<div class="alert-row"><span>'+escapeHtml(x.c.nome)+'</span>'+pill+'</div>';
+  }).join('') : '<div class="field-hint">Nenhum treinamento NR vencendo nos próximos 30 dias.</div>';
+
+  // Contratos de experiência a vencer
+  const expList = colaboradores
+    .filter(c=>c.fimExperiencia && c.status!=='desligado')
+    .map(c=>({c, dias:daysUntil(c.fimExperiencia)}))
+    .filter(x=>x.dias!==null && x.dias<=15)
+    .sort((a,b)=>a.dias-b.dias);
+  document.getElementById('painelExperiencia').innerHTML = expList.length ? expList.map(x=>{
+    const pill = x.dias<0 ? '<span class="alert-pill late">Venceu há '+Math.abs(x.dias)+'d</span>' : '<span class="alert-pill soon">Vence em '+x.dias+'d</span>';
+    return '<div class="alert-row"><span>'+escapeHtml(x.c.nome)+' — '+fmtData(x.c.fimExperiencia)+'</span>'+pill+'</div>';
+  }).join('') : '<div class="field-hint">Nenhum contrato de experiência vencendo nos próximos 15 dias.</div>';
+
+  // EPIs a substituir (C.A. vencido/vencendo ou fim da vida útil) — só itens ainda "Entregue" (não devolvidos)
+  const epiList = todosEpis
+    .filter(ep=>ep.statusEpi!=='Devolvido' && ep.substituicaoPrevista)
+    .map(ep=>({ ep, dias:daysUntil(ep.substituicaoPrevista), c:colaboradores.find(c=>c.id===ep.colaboradorId) }))
+    .filter(x=>x.dias!==null && x.dias<=30 && x.c && x.c.status!=='desligado')
+    .sort((a,b)=>a.dias-b.dias);
+  document.getElementById('painelEpis').innerHTML = epiList.length ? epiList.map(x=>{
+    const pill = x.dias<0 ? '<span class="alert-pill late">Vencido há '+Math.abs(x.dias)+'d</span>' : '<span class="alert-pill soon">Vence em '+x.dias+'d</span>';
+    return '<div class="alert-row"><span>'+escapeHtml(x.c.nome)+' — '+escapeHtml(x.ep.nomeEpi)+'</span>'+pill+'</div>';
+  }).join('') : '<div class="field-hint">Nenhum EPI com substituição prevista nos próximos 30 dias.</div>';
+
+  // Solicitações de troca de EPI pendentes (visão consolidada de todas as pessoas)
+  const solPendentes = todasSolicitacoesEpi
+    .filter(s=>s.status==='Pendente')
+    .map(s=>({ s, c:colaboradores.find(c=>c.id===s.colaboradorId), dias:daysSince(s.dataSolicitacao) }))
+    .filter(x=>x.c)
+    .sort((a,b)=>(b.dias||0)-(a.dias||0));
+  document.getElementById('painelSolicitacoesEpi').innerHTML = solPendentes.length ? solPendentes.map(x=>{
+    const pill = x.dias>=7 ? '<span class="alert-pill late">Aguardando há '+x.dias+'d</span>' : '<span class="alert-pill soon">Aguardando há '+x.dias+'d</span>';
+    return '<div class="alert-row"><span>'+escapeHtml(x.c.nome)+' — '+escapeHtml(x.s.nomeEpi)+'</span>'+pill+'</div>';
+  }).join('') : '<div class="field-hint">Nenhuma solicitação de troca pendente.</div>';
+}
+
+/* ---------- EXPORTAR CSV ---------- */
+function csvEscape(v){
+  const s = String(v==null?'':v);
+  return '"'+s.replace(/"/g,'""')+'"';
+}
+function exportCSV(){
+  const headers = ['Nome','Função','Obra/Lotação','CPF','RG','Nacionalidade','Estado civil','Endereço','Salário','Salário por extenso','Data admissão','Status','Tipo de contrato','Fim experiência','Validade ASO','Validade treinamento NR'];
+  const rows = colaboradores.map(c=>[
+    c.nome,c.funcao,c.obra,c.cpf,c.rg,c.nacionalidade,c.estadoCivil,c.endereco,c.salario,c.salarioExtenso,
+    fmtData(c.dataAdmissao),c.status,c.tipoContrato,fmtData(c.fimExperiencia),fmtData(c.asoValidade),fmtData(c.treinoValidade)
+  ]);
+  const csv = [headers, ...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'colaboradores_'+(empresa.nome||'empresa').replace(/[^a-zA-Z0-9]+/g,'_')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+const CARGOS_PADRAO = ["Pedreiro","Servente","Carpinteiro","Armador","Eletricista","Encanador / Bombeiro Hidráulico","Pintor","Mestre de Obras","Técnico de Segurança do Trabalho","Engenheiro(a)","Auxiliar Administrativo"];
+const CBO_POR_CARGO = {
+  "Pedreiro": "7152-10",
+  "Servente": "7170-20",
+  "Carpinteiro": "7155-05",
+  "Armador": "7153-15",
+  "Eletricista": "7156-10",
+  "Encanador / Bombeiro Hidráulico": "7241-10",
+  "Pintor": "7166-10",
+  "Mestre de Obras": "7102-05",
+  "Técnico de Segurança do Trabalho": "3516-05",
+  "Engenheiro(a)": "2142-05",
+  "Auxiliar Administrativo": "4110-05",
+};
+
+/* ---------- MÁSCARAS E BUSCA DE CEP (ViaCEP) ---------- */
+function maskCPF(v){
+  v = v.replace(/\D/g,'').slice(0,11);
+  v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+  return v;
+}
+function maskRG(v){
+  v = v.replace(/\D/g,'').slice(0,9);
+  v = v.replace(/(\d{2})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1})$/,'$1-$2');
+  return v;
+}
+function maskCEP(v){
+  v = v.replace(/\D/g,'').slice(0,8);
+  v = v.replace(/(\d{5})(\d)/,'$1-$2');
+  return v;
+}
+async function buscarCEP(){
+  const cepEl = document.getElementById('cCep');
+  const hint = document.getElementById('cepHint');
+  const cep = cepEl.value.replace(/\D/g,'');
+  if(cep.length!==8){ if(cep.length>0) hint.textContent='CEP incompleto.'; return; }
+  hint.textContent = 'Buscando endereço…';
+  try{
+    const resp = await fetch('https://viacep.com.br/ws/'+cep+'/json/');
+    const data = await resp.json();
+    if(data.erro){ hint.textContent = 'CEP não encontrado — preencha o endereço manualmente.'; return; }
+    const partes = [data.logradouro, data.bairro, (data.localidade&&data.uf) ? (data.localidade+'/'+data.uf) : ''].filter(Boolean);
+    document.getElementById('cEndereco').value = partes.join(', ');
+    hint.textContent = 'Endereço encontrado — complete com número e complemento.';
+  }catch(e){ console.error(e); hint.textContent = 'Não foi possível buscar o CEP agora. Preencha manualmente.'; }
+}
+
+/* ---------- ABAS DO MODAL DE COLABORADOR ---------- */
+function switchColabTab(n){
+  document.querySelectorAll('.modal-tab-btn').forEach(b=>b.classList.toggle('active', Number(b.dataset.tab)===n));
+  document.querySelectorAll('.modal-tab-content').forEach(c=>c.classList.toggle('active', Number(c.dataset.tabcontent)===n));
+}
+
+/* ---------- DEPENDENTES (Salário-Família e benefícios) ---------- */
+async function addDependente(){
+  const nome = document.getElementById('depNome').value.trim();
+  if(!nome){ alert('Informe o nome do dependente.'); return; }
+  const parentesco = document.getElementById('depParentesco').value;
+  const dataNascimento = document.getElementById('depNascimento').value;
+  const fileInput = document.getElementById('depDocFile');
+  const file = fileInput.files[0];
+  const msgEl = document.getElementById('depMsg');
+  msgEl.textContent = 'Salvando…';
+  let colabId;
+  try{ colabId = await ensureDraftDoc(); }catch(e){ msgEl.textContent=''; return; }
+  const entry = { id:'dep'+Date.now(), nome, parentesco, dataNascimento, docNome:null, docUrl:null, docPath:null };
+  try{
+    if(file){
+      const path = 'colaboradores/'+colabId+'/dependentes/'+entry.id+'_'+file.name;
+      const snapshot = await storage.ref(path).put(file);
+      entry.docUrl = await snapshot.ref.getDownloadURL();
+      entry.docPath = path;
+      entry.docNome = file.name;
+    }
+    const c = colaboradores.find(x=>x.id===colabId);
+    const deps = ((c && c.dependentes) || []).concat([entry]);
+    await db.collection('colaboradores').doc(colabId).update({ dependentes: deps, ...auditFields(false) });
+    if(c) c.dependentes = deps;
+    msgEl.textContent = 'Adicionado ✓';
+    document.getElementById('depNome').value = '';
+    document.getElementById('depNascimento').value = '';
+    fileInput.value = '';
+    renderDependentesList(colabId);
+  }catch(e){ console.error(e); msgEl.textContent=''; alert(traduzErroDados(e)); }
+}
+async function deleteDependente(colabId, depId){
+  if(!confirm('Remover este dependente?')) return;
+  const c = colaboradores.find(x=>x.id===colabId);
+  if(!c) return;
+  const alvo = (c.dependentes||[]).find(d=>d.id===depId);
+  const deps = (c.dependentes||[]).filter(d=>d.id!==depId);
+  try{
+    if(alvo && alvo.docPath){ try{ await storage.ref(alvo.docPath).delete(); }catch(e){ console.error(e); } }
+    await db.collection('colaboradores').doc(colabId).update({ dependentes: deps, ...auditFields(false) });
+    c.dependentes = deps;
+    renderDependentesList(colabId);
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); }
+}
+function renderDependentesList(colabId){
+  const c = colaboradores.find(x=>x.id===colabId);
+  const deps = (c && c.dependentes) || [];
+  const wrap = document.getElementById('depList');
+  if(deps.length===0){ wrap.innerHTML = '<div class="field-hint">Nenhum dependente cadastrado ainda.</div>'; return; }
+  wrap.innerHTML = deps.map(d=>
+    '<div class="alert-row"><span><strong>'+escapeHtml(d.nome)+'</strong> — '+escapeHtml(d.parentesco)+(d.dataNascimento?' &middot; '+fmtData(d.dataNascimento):'')+
+    (d.docUrl ? ' &middot; <a href="'+d.docUrl+'" target="_blank" rel="noopener">'+escapeHtml(d.docNome||'documento')+'</a>' : '')+'</span>'+
+    '<button class="btn btn-ghost" style="padding:3px 9px;" type="button" onclick="deleteDependente(\''+colabId+'\',\''+d.id+'\')">Remover</button></div>'
+  ).join('');
+}
+
+function onCargoChange(){
+  const sel = document.getElementById('cFuncao');
+  document.getElementById('cFuncaoOutraWrap').style.display = sel.value==='Outro' ? 'block' : 'none';
+  const cboField = document.getElementById('cCbo');
+  if(sel.value!=='Outro' && CBO_POR_CARGO[sel.value]) cboField.value = CBO_POR_CARGO[sel.value];
+}
+
+/* ---------- COLABORADORES ---------- */
+let currentColabIsNew = false;
+let currentColabHasDraftDoc = false;
+
+function openColabModal(id){
+  document.getElementById('colabModalTitle').textContent = id ? 'Editar colaborador' : 'Novo colaborador';
+  populateObraSelectColab();
+  if(id){
+    currentColabIsNew = false;
+    currentColabHasDraftDoc = false;
+    document.getElementById('colabId').value = id;
+    const c = colaboradores.find(x=>x.id===id);
+    document.getElementById('cNome').value = c.nome||'';
+    if(c.funcao && !CARGOS_PADRAO.includes(c.funcao)){
+      document.getElementById('cFuncao').value = 'Outro';
+      document.getElementById('cFuncaoOutra').value = c.funcao;
+    } else {
+      document.getElementById('cFuncao').value = c.funcao || 'Pedreiro';
+      document.getElementById('cFuncaoOutra').value = '';
+    }
+    const obraExiste = c.obra && obras.some(o=>o.nome===c.obra);
+    if(c.obra && !obraExiste){
+      document.getElementById('cObra').value = 'Outra';
+      document.getElementById('cObraOutra').value = c.obra;
+    } else {
+      document.getElementById('cObra').value = c.obra || '';
+      document.getElementById('cObraOutra').value = '';
+    }
+    document.getElementById('cMatricula').value = c.matricula||'';
+    document.getElementById('cCpf').value = c.cpf||'';
+    document.getElementById('cRg').value = c.rg||'';
+    document.getElementById('cPis').value = c.pis||'';
+    document.getElementById('cCbo').value = c.cbo||'';
+    document.getElementById('cSexo').value = c.sexo||'';
+    document.getElementById('cNacionalidade').value = c.nacionalidade||'brasileira';
+    document.getElementById('cEstadoCivil').value = c.estadoCivil||'';
+    document.getElementById('cEndereco').value = c.endereco||'';
+    document.getElementById('cCep').value = c.cep||'';
+    document.getElementById('cSalario').value = c.salario||'';
+    document.getElementById('cSalarioExtenso').value = c.salarioExtenso||'';
+    document.getElementById('cData').value = c.dataAdmissao||'';
+    document.getElementById('cStatus').value = c.status||'ativo';
+    document.getElementById('cTipoContrato').value = c.tipoContrato||'indeterminado';
+    document.getElementById('cFimExperiencia').value = c.fimExperiencia||'';
+    document.getElementById('cAsoValidade').value = c.asoValidade||'';
+    document.getElementById('cTreinoValidade').value = c.treinoValidade||'';
+    renderDocList(id);
+    renderFotoPreview(id);
+    renderDependentesList(id);
+  } else {
+    currentColabIsNew = true;
+    currentColabHasDraftDoc = false;
+    document.getElementById('colabId').value = 'c'+Date.now(); // gerado já na abertura, para permitir anexar foto/docs imediatamente
+    ['cNome','cCpf','cRg','cPis','cCbo','cEstadoCivil','cEndereco','cCep','cSalario','cSalarioExtenso','cData','cFimExperiencia','cAsoValidade','cTreinoValidade','cFuncaoOutra','cObraOutra','cMatricula'].forEach(f=>document.getElementById(f).value='');
+    document.getElementById('cObra').value = '';
+    document.getElementById('cSexo').value = '';
+    document.getElementById('cNacionalidade').value='brasileira';
+    document.getElementById('cStatus').value='admissao';
+    document.getElementById('cTipoContrato').value='indeterminado';
+    document.getElementById('cFuncao').value='Pedreiro';
+    document.getElementById('fotoPreview').innerHTML = '&#128100;';
+    document.getElementById('docList').innerHTML = '<div class="field-hint">Nenhum documento anexado ainda.</div>';
+    document.getElementById('depList').innerHTML = '<div class="field-hint">Nenhum dependente cadastrado ainda.</div>';
+    document.getElementById('depNome').value = '';
+    document.getElementById('depNascimento').value = '';
+  }
+  document.getElementById('docAnexosWrap').style.display = 'block';
+  document.getElementById('docAnexosHint').style.display = 'none';
+  document.getElementById('fotoHint').style.display = 'none';
+  switchColabTab(1);
+  onCargoChange();
+  onObraSelectChange();
+  aplicarSigiloNoModal();
+  setupDropzone('fotoDropzone','fotoFile');
+  setupDropzone('docDropzone','docFile');
+  setupDropzone('depDocDropzone','depDocFile');
+  document.getElementById('colabModalBackdrop').classList.add('active');
+}
+
+// Garante que existe um documento (mesmo que rascunho) no Firestore antes de poder anexar foto/documentos
+async function ensureDraftDoc(){
+  const colabId = document.getElementById('colabId').value;
+  if(!currentColabIsNew || currentColabHasDraftDoc) return colabId;
+  const nome = document.getElementById('cNome').value.trim() || '(cadastro em andamento)';
+  const draft = { id: colabId, nome, status: 'admissao', ...auditFields(true) };
+  try{
+    await db.collection('colaboradores').doc(colabId).set(draft, { merge: true });
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); throw e; }
+  colaboradores.push(draft);
+  currentColabHasDraftDoc = true;
+  return colabId;
+}
+
+async function closeColabModal(){
+  document.getElementById('colabModalBackdrop').classList.remove('active');
+  // Se era um cadastro novo, teve arquivo anexado, mas não chegou a ser salvo de verdade — remove o rascunho para não sujar a base
+  if(currentColabIsNew && currentColabHasDraftDoc){
+    const colabId = document.getElementById('colabId').value;
+    try{
+      const c = colaboradores.find(x=>x.id===colabId);
+      const arquivos = [...((c && c.documentos) || [])];
+      if(c && c.fotoPath) arquivos.push({ path: c.fotoPath });
+      ((c && c.dependentes) || []).forEach(d=>{ if(d.docPath) arquivos.push({ path: d.docPath }); });
+      for(const a of arquivos){ if(a.path){ try{ await storage.ref(a.path).delete(); }catch(e){ console.error(e); } } }
+      await db.collection('colaboradores').doc(colabId).delete();
+    }catch(e){ console.error(e); }
+    colaboradores = colaboradores.filter(x=>x.id!==colabId);
+    renderColabTable(); populateColabSelects();
+  }
+  currentColabIsNew = false;
+  currentColabHasDraftDoc = false;
+}
+
+/* ---------- OBRAS (cadastro padronizado + relatório de alocação) ---------- */
+let obras = [];
+let todosEpis = []; // cache de todos os EPIs (todas as pessoas) usado pelo alerta "EPIs a Substituir" no Painel
+async function loadTodosEpis(){
+  if(!db) return;
+  try{
+    const snap = await db.collection('epis').get();
+    todosEpis = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }catch(e){ console.error('epis (global)', e); todosEpis = []; }
+}
+let todasSolicitacoesEpi = []; // solicitações de troca (com foto), de todas as pessoas
+async function loadSolicitacoesEpi(){
+  if(!db) return;
+  try{
+    const snap = await db.collection('epiSolicitacoes').get();
+    todasSolicitacoesEpi = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }catch(e){ console.error('epiSolicitacoes', e); todasSolicitacoesEpi = []; }
+}
+async function loadObras(){
+  if(!db) return;
+  try{
+    const snap = await db.collection('obras').orderBy('nome').get();
+    obras = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }catch(e){ console.error('obras', e); obras = []; }
+}
+function populateObraSelectColab(){
+  const sel = document.getElementById('cObra');
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Selecione a obra</option>' +
+    obras.filter(o=>o.status!=='concluida').map(o=>'<option value="'+escapeHtml(o.nome)+'">'+escapeHtml(o.nome)+'</option>').join('') +
+    (obras.some(o=>o.status==='concluida') ? '<optgroup label="Obras concluídas">'+obras.filter(o=>o.status==='concluida').map(o=>'<option value="'+escapeHtml(o.nome)+'">'+escapeHtml(o.nome)+'</option>').join('')+'</optgroup>' : '') +
+    '<option value="Outra">Outra (especificar)</option>';
+  if([...sel.options].some(op=>op.value===prev)) sel.value = prev;
+}
+function onObraSelectChange(){
+  const sel = document.getElementById('cObra');
+  document.getElementById('cObraOutraWrap').style.display = sel.value==='Outra' ? 'block' : 'none';
+}
+function openObraModal(id){
+  document.getElementById('obraModalTitle').textContent = id ? 'Editar obra' : 'Nova obra';
+  document.getElementById('obraId').value = id || '';
+  if(id){
+    const o = obras.find(x=>x.id===id);
+    document.getElementById('obraNome').value = o.nome||'';
+    document.getElementById('obraEndereco').value = o.endereco||'';
+    document.getElementById('obraStatus').value = o.status||'ativa';
+  } else {
+    document.getElementById('obraNome').value = '';
+    document.getElementById('obraEndereco').value = '';
+    document.getElementById('obraStatus').value = 'ativa';
+  }
+  document.getElementById('obraModalBackdrop').classList.add('active');
+}
+function closeObraModal(){ document.getElementById('obraModalBackdrop').classList.remove('active'); }
+async function saveObra(){
+  const id = document.getElementById('obraId').value;
+  const nome = document.getElementById('obraNome').value.trim();
+  if(!nome){ alert('Informe o nome da obra.'); return; }
+  const data = {
+    nome,
+    endereco: document.getElementById('obraEndereco').value.trim(),
+    status: document.getElementById('obraStatus').value,
+    ...auditFields(!id),
+  };
+  try{
+    const docId = id || ('obra'+Date.now());
+    await db.collection('obras').doc(docId).set(data, { merge: true });
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  if(id){ const idx = obras.findIndex(x=>x.id===id); obras[idx] = { ...obras[idx], ...data }; }
+  else{ obras.push({ id: id || undefined, ...data }); await loadObras(); }
+  closeObraModal();
+  renderObrasTable();
+  populateObraSelectColab();
+  renderRelatorioAlocacao();
+}
+async function deleteObra(id){
+  const o = obras.find(x=>x.id===id);
+  const emUso = colaboradores.filter(c=>c.obra===(o&&o.nome)).length;
+  const msg = emUso>0
+    ? 'Esta obra tem '+emUso+' colaborador(es) alocado(s). Eles não serão apagados, mas ficarão com a obra em branco. Excluir mesmo assim?'
+    : 'Excluir esta obra?';
+  if(!confirm(msg)) return;
+  try{ await db.collection('obras').doc(id).delete(); }
+  catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  obras = obras.filter(x=>x.id!==id);
+  renderObrasTable();
+  populateObraSelectColab();
+  renderRelatorioAlocacao();
+}
+function renderObrasTable(){
+  const wrap = document.getElementById('obrasTableWrap');
+  if(!wrap) return;
+  if(obras.length===0){
+    wrap.innerHTML = '<div class="empty-state"><div class="big">&#127959;&#65039;</div>Nenhuma obra cadastrada ainda.</div>';
+    return;
+  }
+  const rows = obras.map(o=>{
+    const count = colaboradores.filter(c=>c.obra===o.nome && c.status!=='desligado').length;
+    return '<tr>'+
+      '<td><strong>'+escapeHtml(o.nome)+'</strong><br><span style="color:var(--ink-soft); font-size:11.5px;">'+escapeHtml(o.endereco||'—')+'</span></td>'+
+      '<td><span class="tag">'+(o.status==='concluida'?'Concluída':'Ativa')+'</span></td>'+
+      '<td>'+count+'</td>'+
+      '<td class="row-actions">'+
+        '<button title="Editar" onclick="openObraModal(\''+o.id+'\')">&#9998;</button>'+
+        '<button title="Excluir" onclick="deleteObra(\''+o.id+'\')">&#128465;</button>'+
+      '</td></tr>';
+  }).join('');
+  wrap.innerHTML = '<table><thead><tr><th>Obra</th><th>Status</th><th>Colaboradores</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function renderRelatorioAlocacao(){
+  const wrap = document.getElementById('relatorioAlocacaoWrap');
+  if(!wrap) return;
+  const ativos = colaboradores.filter(c=>c.status!=='desligado');
+  const grupos = {};
+  ativos.forEach(c=>{
+    const key = c.obra || 'Sem obra definida';
+    if(!grupos[key]) grupos[key] = [];
+    grupos[key].push(c);
+  });
+  const chaves = Object.keys(grupos).sort((a,b)=> a==='Sem obra definida' ? 1 : (b==='Sem obra definida' ? -1 : a.localeCompare(b)));
+  if(chaves.length===0){ wrap.innerHTML = '<div class="empty-state">Nenhum colaborador ativo cadastrado ainda.</div>'; return; }
+  wrap.innerHTML = chaves.map(k=>{
+    const lista = grupos[k];
+    return '<div class="alert-row" style="align-items:flex-start; flex-direction:column; gap:6px; padding:12px 4px;">'+
+      '<div style="display:flex; justify-content:space-between; width:100%;"><strong>'+escapeHtml(k)+'</strong><span class="tag">'+lista.length+' colaborador(es)</span></div>'+
+      '<div style="font-size:12.5px; color:var(--ink-soft);">'+lista.map(c=>escapeHtml(c.nome)+' ('+escapeHtml(c.funcao||'—')+')').join(', ')+'</div>'+
+    '</div>';
+  }).join('');
+}
+function relatorioAlocacaoHTML(){
+  const ativos = colaboradores.filter(c=>c.status!=='desligado');
+  const grupos = {};
+  ativos.forEach(c=>{ const key = c.obra || 'Sem obra definida'; if(!grupos[key]) grupos[key]=[]; grupos[key].push(c); });
+  const chaves = Object.keys(grupos).sort((a,b)=> a==='Sem obra definida' ? 1 : (b==='Sem obra definida' ? -1 : a.localeCompare(b)));
+  let body = logoBlock() + '<h1>RELATÓRIO DE ALOCAÇÃO DE COLABORADORES</h1>' +
+    '<p style="text-align:center; color:#888; font-size:12px;">'+escapeHtml(empresa.nome)+' &middot; Gerado em '+new Date().toLocaleDateString('pt-BR')+'</p>';
+  chaves.forEach(k=>{
+    const lista = grupos[k];
+    body += '<h2>'+escapeHtml(k)+' — '+lista.length+' colaborador(es)</h2>';
+    body += '<table style="width:100%; border-collapse:collapse; margin-bottom:14px;">'+
+      '<thead><tr>'+['Nome','Função','Matrícula','CPF'].map(h=>'<th style="text-align:left; font-size:11px; border-bottom:1px solid #ccc; padding:4px;">'+h+'</th>').join('')+'</tr></thead><tbody>'+
+      lista.map(c=>'<tr>'+['nome','funcao','matricula','cpf'].map(f=>'<td style="font-size:12px; border-bottom:1px solid #eee; padding:4px;">'+escapeHtml(c[f]||'—')+'</td>').join('')+'</tr>').join('')+
+      '</tbody></table>';
+  });
+  body += '<p style="margin-top:20px; font-size:11px; color:#888;">Total geral: '+ativos.length+' colaborador(es) ativo(s). Documento gerado automaticamente pelo sistema.</p>';
+  return body;
+}
+function printRelatorioAlocacao(){
+  document.getElementById('relatorioSheet').innerHTML = relatorioAlocacaoHTML();
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('printing'));
+  document.getElementById('view-relatorio-print').classList.add('printing');
+  window.print();
+}
+function exportRelatorioCSV(){
+  const ativos = colaboradores.filter(c=>c.status!=='desligado');
+  const headers = ['Obra','Nome','Função','Matrícula','CPF'];
+  const rows = ativos.map(c=>[c.obra||'Sem obra definida', c.nome, c.funcao, c.matricula, c.cpf]);
+  const csv = [headers, ...rows].map(r=>r.map(csvEscape).join(',')).join('\r\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'relatorio_alocacao_'+(empresa.nome||'empresa').replace(/[^a-zA-Z0-9]+/g,'_')+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- MATRÍCULA (número de cadastro) ---------- */
+function sugerirMatricula(){
+  const nums = colaboradores.map(c=>parseInt(c.matricula,10)).filter(n=>!isNaN(n));
+  const proximo = (nums.length ? Math.max(...nums) : 0) + 1;
+  document.getElementById('cMatricula').value = String(proximo).padStart(4,'0');
+}
+
+/* ---------- FOTO DO COLABORADOR ---------- */
+function renderFotoPreview(colabId){
+  const c = colaboradores.find(x=>x.id===colabId);
+  const box = document.getElementById('fotoPreview');
+  if(c && c.fotoUrl){ box.innerHTML = '<img src="'+c.fotoUrl+'" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" />'; }
+  else{ box.innerHTML = '&#128100;'; }
+}
+/* ---------- ARRASTAR E SOLTAR (foto / documentos) ---------- */
+function setupDropzone(dropId, inputId){
+  const dz = document.getElementById(dropId);
+  const input = document.getElementById(inputId);
+  if(!dz || !input || dz.dataset.bound) return;
+  dz.dataset.bound = '1';
+  ['dragenter','dragover'].forEach(evt=>dz.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover'); }));
+  ['dragleave','drop'].forEach(evt=>dz.addEventListener(evt, e=>{ e.preventDefault(); e.stopPropagation(); dz.classList.remove('dragover'); }));
+  dz.addEventListener('drop', e=>{
+    const files = e.dataTransfer && e.dataTransfer.files;
+    if(files && files.length){
+      input.files = files;
+      input.dispatchEvent(new Event('change'));
+    }
+  });
+}
+// Copia o arquivo tirado pela câmera para o campo principal (substitui) e dispara o upload já existente
+function transferCapturedFile(captureInputId, targetInputId){
+  const captureInput = document.getElementById(captureInputId);
+  const targetInput = document.getElementById(targetInputId);
+  if(!captureInput.files || !captureInput.files.length) return;
+  targetInput.files = captureInput.files;
+  targetInput.dispatchEvent(new Event('change'));
+  captureInput.value = '';
+}
+// Igual à anterior, mas ACRESCENTA ao invés de substituir — usado no campo de múltiplas fotos (Ocorrências)
+function transferCapturedFileAppend(captureInputId, targetInputId){
+  const captureInput = document.getElementById(captureInputId);
+  const targetInput = document.getElementById(targetInputId);
+  if(!captureInput.files || !captureInput.files.length) return;
+  const dt = new DataTransfer();
+  Array.from(targetInput.files || []).forEach(f=>dt.items.add(f));
+  Array.from(captureInput.files).forEach(f=>dt.items.add(f));
+  targetInput.files = dt.files;
+  targetInput.dispatchEvent(new Event('change'));
+  captureInput.value = '';
+}
+
+/* ---------- MINI-ABAS DA TELA DE GESTÃO DE EPIs ---------- */
+function switchEpiTab(n){
+  document.querySelectorAll('.epi-tab-btn').forEach(b=>b.classList.toggle('active', Number(b.dataset.epitab)===n));
+  document.querySelectorAll('.epi-tab-content').forEach(c=>c.classList.toggle('active', Number(c.dataset.epitabcontent)===n));
+}
+function previewSolFoto(){
+  const input = document.getElementById('solFoto');
+  const wrap = document.getElementById('solFotoPreview');
+  if(!wrap) return;
+  const file = input.files && input.files[0];
+  wrap.innerHTML = file ? '<img src="'+URL.createObjectURL(file)+'" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--line);" />' : '';
+}
+function previewOcorFotos(){
+  const input = document.getElementById('ocorFotos');
+  const wrap = document.getElementById('ocorFotosPreview');
+  if(!wrap) return;
+  const files = Array.from(input.files || []);
+  wrap.innerHTML = files.map(f=>'<img src="'+URL.createObjectURL(f)+'" style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid var(--line);" />').join('');
+}
+
+async function uploadFoto(){
+  const fileInput = document.getElementById('fotoFile');
+  const file = fileInput.files[0];
+  if(!file) return;
+  let colabId;
+  try{ colabId = await ensureDraftDoc(); }catch(e){ return; }
+  try{
+    const c = colaboradores.find(x=>x.id===colabId);
+    if(c && c.fotoPath){ try{ await storage.ref(c.fotoPath).delete(); }catch(e){ console.error(e); } }
+    const path = 'colaboradores/'+colabId+'/foto_'+Date.now()+'_'+file.name;
+    const snapshot = await storage.ref(path).put(file);
+    const url = await snapshot.ref.getDownloadURL();
+    await db.collection('colaboradores').doc(colabId).update({ fotoUrl: url, fotoPath: path, ...auditFields(false) });
+    if(c){ c.fotoUrl = url; c.fotoPath = path; }
+    renderFotoPreview(colabId);
+    fileInput.value = '';
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); }
+}
+
+async function saveColaborador(){
+  const id = document.getElementById('colabId').value;
+  const nome = document.getElementById('cNome').value.trim();
+  if(!nome){ alert('Informe o nome do colaborador.'); return; }
+  const funcaoSel = document.getElementById('cFuncao').value;
+  const funcao = funcaoSel==='Outro' ? document.getElementById('cFuncaoOutra').value.trim() : funcaoSel;
+  const obraSel = document.getElementById('cObra').value;
+  const obra = obraSel==='Outra' ? document.getElementById('cObraOutra').value.trim() : obraSel;
+  const isNew = currentColabIsNew;
+  const registroAtual = colaboradores.find(x=>x.id===id);
+  const statusAnterior = registroAtual ? registroAtual.status : null;
+  const status = document.getElementById('cStatus').value;
+  const data = {
+    id, nome,
+    funcao,
+    obra,
+    matricula: document.getElementById('cMatricula').value.trim(),
+    cpf: document.getElementById('cCpf').value.trim(),
+    rg: document.getElementById('cRg').value.trim(),
+    pis: document.getElementById('cPis').value.trim(),
+    cbo: document.getElementById('cCbo').value.trim(),
+    sexo: document.getElementById('cSexo').value,
+    nacionalidade: document.getElementById('cNacionalidade').value.trim(),
+    estadoCivil: document.getElementById('cEstadoCivil').value.trim(),
+    endereco: document.getElementById('cEndereco').value.trim(),
+    cep: document.getElementById('cCep').value.trim(),
+    salario: document.getElementById('cSalario').value.trim(),
+    salarioExtenso: document.getElementById('cSalarioExtenso').value.trim(),
+    dataAdmissao: document.getElementById('cData').value,
+    status,
+    tipoContrato: document.getElementById('cTipoContrato').value,
+    fimExperiencia: document.getElementById('cFimExperiencia').value,
+    asoValidade: document.getElementById('cAsoValidade').value,
+    treinoValidade: document.getElementById('cTreinoValidade').value,
+    ...auditFields(isNew),
+  };
+  // Desligamento agora: gera automaticamente o checklist de desligamento (vazio, pronto para marcar)
+  const viraDesligado = status === 'desligado' && statusAnterior !== 'desligado';
+  if(viraDesligado){
+    const jaTemChecklist = registroAtual && registroAtual.checklistDesligamento;
+    if(!jaTemChecklist) data.checklistDesligamento = {};
+  }
+  try{
+    await db.collection('colaboradores').doc(id).set(data, { merge: true });
+  }catch(e){
+    console.error(e);
+    await loadAll(); // recarrega o estado real do servidor, já que a gravação falhou
+    alert(traduzErroDados(e));
+    return;
+  }
+  const idx = colaboradores.findIndex(x=>x.id===id);
+  if(idx>-1) colaboradores[idx] = { ...colaboradores[idx], ...data }; else colaboradores.push(data);
+  currentColabIsNew = false; currentColabHasDraftDoc = false; // já foi salvo de verdade — Cancelar não deve mais apagar
+  document.getElementById('colabModalBackdrop').classList.remove('active');
+  renderColabTable(); populateColabSelects(); renderRelatorioAlocacao(); renderPainel();
+  if(viraDesligado){
+    alert('Colaborador marcado como desligado. Um Checklist de Desligamento foi criado — acesse "Checklist Admissão" e troque o tipo para "Desligamento".');
+  }
+}
+async function deleteColaborador(id){
+  if(!confirm('Remover este colaborador do cadastro? O checklist, o histórico de ocorrências, de EPIs e os documentos/foto dele também serão apagados — inclusive do armazenamento, para não ocupar a cota gratuita.')) return;
+  const c = colaboradores.find(x=>x.id===id);
+  try{
+    // Apaga arquivos do Storage primeiro (documentos anexos + foto + docs de dependentes), depois os dados do Firestore
+    const arquivos = [...((c && c.documentos) || [])];
+    if(c && c.fotoPath) arquivos.push({ path: c.fotoPath });
+    ((c && c.dependentes) || []).forEach(d=>{ if(d.docPath) arquivos.push({ path: d.docPath }); });
+
+    const snap = await db.collection('ocorrencias').where('colaboradorId','==',id).get();
+    snap.forEach(d=>{ ((d.data().fotos)||[]).forEach(f=>{ if(f.path) arquivos.push({ path:f.path }); }); });
+    const snapSolic = await db.collection('epiSolicitacoes').where('colaboradorId','==',id).get();
+    snapSolic.forEach(d=>{ if(d.data().fotoPath) arquivos.push({ path: d.data().fotoPath }); });
+
+    for(const doc of arquivos){
+      if(doc.path){ try{ await storage.ref(doc.path).delete(); }catch(e){ console.error('Falha ao remover arquivo do Storage (prosseguindo):', e); } }
+    }
+    await db.collection('colaboradores').doc(id).delete();
+    const batch = db.batch();
+    snap.forEach(d=>batch.delete(d.ref));
+    const snapEpis = await db.collection('epis').where('colaboradorId','==',id).get();
+    snapEpis.forEach(d=>batch.delete(d.ref));
+    snapSolic.forEach(d=>batch.delete(d.ref));
+    await batch.commit();
+  }catch(e){
+    console.error(e);
+    alert(traduzErroDados(e) + ' O colaborador NÃO foi removido — nada foi apagado da lista.');
+    return; // não mexe no estado local: se a exclusão falhou, o colaborador continua visível de propósito
+  }
+  colaboradores = colaboradores.filter(x=>x.id!==id);
+  todosEpis = todosEpis.filter(ep=>ep.colaboradorId!==id);
+  todasSolicitacoesEpi = todasSolicitacoesEpi.filter(s=>s.colaboradorId!==id);
+  renderColabTable(); populateColabSelects(); renderPainel();
+}
+function fmtData(iso){ if(!iso) return '—'; const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; }
+function populateFiltroFuncao(){
+  const sel = document.getElementById('filtroFuncao');
+  const prev = sel.value;
+  const cargosPresentes = [...new Set(colaboradores.map(c=>c.funcao).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos os cargos</option>' + cargosPresentes.map(f=>'<option value="'+escapeHtml(f)+'">'+escapeHtml(f)+'</option>').join('');
+  if(cargosPresentes.includes(prev)) sel.value = prev;
+}
+function populateFiltroObra(){
+  const sel = document.getElementById('filtroObra');
+  const prev = sel.value;
+  const obrasPresentes = [...new Set(colaboradores.map(c=>c.obra).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todas as obras</option>' + obrasPresentes.map(o=>'<option value="'+escapeHtml(o)+'">'+escapeHtml(o)+'</option>').join('');
+  if(obrasPresentes.includes(prev)) sel.value = prev;
+}
+function renderColabTable(){
+  populateFiltroFuncao();
+  populateFiltroObra();
+  const wrap = document.getElementById('colabTableWrap');
+  const filtroFuncao = document.getElementById('filtroFuncao').value;
+  const filtroObra = document.getElementById('filtroObra').value;
+  const busca = (document.getElementById('buscaColab').value || '').trim().toLowerCase();
+  const somenteLeitura = currentUserRole==='engenheiro';
+  const btnNovo = document.getElementById('btnNovoColab');
+  if(btnNovo) btnNovo.style.display = somenteLeitura ? 'none' : '';
+  const btnCSV = document.getElementById('btnExportCSV');
+  if(btnCSV) btnCSV.style.display = somenteLeitura ? 'none' : '';
+  let list = colaboradores;
+  if(currentUserRole==='engenheiro') list = list.filter(c=>c.obra===currentUserObra); // Engenheiro só vê a própria equipe
+  if(filtroFuncao) list = list.filter(c=>c.funcao===filtroFuncao);
+  if(filtroObra) list = list.filter(c=>c.obra===filtroObra);
+  if(busca) list = list.filter(c=>
+    (c.nome||'').toLowerCase().includes(busca) ||
+    (c.cpf||'').toLowerCase().includes(busca) ||
+    (c.matricula||'').toLowerCase().includes(busca)
+  );
+  if(list.length===0){
+    wrap.innerHTML = '<div class="empty-state"><div class="big">&#128203;</div>'+((filtroFuncao||filtroObra||busca) ? 'Nenhum colaborador com esse filtro.' : 'Nenhum colaborador cadastrado ainda.<br>Clique em "Novo colaborador" para começar.')+'</div>';
+    return;
+  }
+  const rows = list.map(c=>{
+    const statusLabel = c.status==='ativo'?'Ativo':(c.status==='admissao'?'Em admissão':'Desligado');
+    const avatar = c.fotoUrl
+      ? '<img src="'+c.fotoUrl+'" style="width:30px; height:30px; border-radius:50%; object-fit:cover; vertical-align:middle; margin-right:8px;" />'
+      : '<span style="display:inline-flex; width:30px; height:30px; border-radius:50%; background:var(--bg); align-items:center; justify-content:center; vertical-align:middle; margin-right:8px; font-size:13px; color:var(--ink-soft);">&#128100;</span>';
+    const acoes = somenteLeitura
+      ? '<button title="Ver" onclick="openColabModal(\''+c.id+'\')">&#128065;&#65039;</button>'
+      : '<button title="Editar" onclick="openColabModal(\''+c.id+'\')">&#9998;</button>'+
+        '<button title="Gerar contrato" onclick="goToContrato(\''+c.id+'\')">&#128196;</button>'+
+        '<button title="Excluir" onclick="deleteColaborador(\''+c.id+'\')">&#128465;</button>';
+    return '<tr>'+
+      '<td>'+avatar+'<strong>'+escapeHtml(c.nome)+'</strong><br><span style="color:var(--ink-soft); font-size:11.5px; margin-left:38px;">'+escapeHtml(c.funcao||'—')+(c.matricula?' &middot; Matr. '+escapeHtml(c.matricula):'')+'</span></td>'+
+      '<td>'+escapeHtml(c.obra||'—')+'</td>'+
+      '<td>'+escapeHtml(c.cpf||'—')+'</td>'+
+      '<td>'+fmtData(c.dataAdmissao)+'</td>'+
+      '<td><span class="tag">'+statusLabel+'</span></td>'+
+      '<td class="row-actions">'+acoes+'</td></tr>';
+  }).join('');
+  wrap.innerHTML = '<table><thead><tr><th>Colaborador</th><th>Obra</th><th>CPF</th><th>Admissão</th><th>Status</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function goToContrato(id){
+  showView('contrato');
+  document.querySelectorAll('nav.nav button').forEach(b=>b.classList.toggle('active', b.dataset.view==='contrato'));
+  document.getElementById('contratoColabSelect').value = id;
+  renderContrato();
+}
+function populateColabSelects(){
+  ['contratoColabSelect','checklistColabSelect','ocorColabSelect','epiColabSelect','epiSolicColabSelect'].forEach(selId=>{
+    const sel = document.getElementById(selId);
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">Selecione um colaborador…</option>' + colaboradores.map(c=>
+      '<option value="'+c.id+'" data-search="'+escapeHtml(((c.nome||'')+' '+(c.cpf||'')+' '+(c.matricula||'')).toLowerCase())+'">'+escapeHtml(c.nome)+'</option>'
+    ).join('');
+    if(colaboradores.some(c=>c.id===prev)) sel.value = prev;
+  });
+}
+function filterColabSelect(inputEl, selectId){
+  const term = inputEl.value.trim().toLowerCase();
+  const sel = document.getElementById(selectId);
+  Array.from(sel.options).forEach(opt=>{
+    if(!opt.value){ opt.style.display=''; return; } // "Selecione um colaborador…" sempre visível
+    const alvo = opt.dataset.search || opt.textContent.toLowerCase();
+    opt.style.display = alvo.includes(term) ? '' : 'none';
+  });
+}
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function hl(s){ return '<span class="placeholder-hl">'+ (s && s.trim() ? escapeHtml(s) : '[PREENCHER]') +'</span>'; }
+
+/* ---------- DOCUMENTOS ---------- */
+function renderContrato(){
+  const card = document.getElementById('contratoCard');
+  const colabId = document.getElementById('contratoColabSelect').value;
+  const doc = document.getElementById('contratoDocSelect').value;
+  if(!colabId){ card.style.display='none'; return; }
+  const c = colaboradores.find(x=>x.id===colabId);
+  if(!c){ card.style.display='none'; return; }
+  card.style.display='block';
+  const conteudo = doc==='termo' ? termoHTML(c) : (doc==='ficha' ? fichaColaboradorHTML(c) : contratoHTML(c));
+  document.getElementById('contratoSheet').innerHTML = conteudo;
+}
+function fichaColaboradorHTML(c){
+  const statusLabel = c.status==='ativo'?'Ativo':(c.status==='admissao'?'Em admissão':'Desligado');
+  const fotoHTML = c.fotoUrl
+    ? '<img src="'+c.fotoUrl+'" style="width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid #ccc;" />'
+    : '<div style="width:96px; height:96px; border-radius:8px; border:1px solid #ccc; display:flex; align-items:center; justify-content:center; font-size:32px; color:#bbb;">&#128100;</div>';
+  return logoBlock() +
+  '<h1>FICHA CADASTRAL DO COLABORADOR</h1>' +
+  '<div style="display:flex; gap:18px; align-items:flex-start; margin-bottom:10px;">' + fotoHTML +
+    '<div style="flex:1;">' +
+      '<p style="margin:0 0 4px 0;"><strong>'+escapeHtml(c.nome||'—')+'</strong></p>' +
+      '<p style="margin:0 0 4px 0; font-size:12px; color:#555;">Matrícula: '+escapeHtml(c.matricula||'—')+' &nbsp;&middot;&nbsp; Status: '+statusLabel+'</p>' +
+      '<p style="margin:0; font-size:12px; color:#555;">'+escapeHtml(c.funcao||'—')+' — '+escapeHtml(c.obra||'Sem obra definida')+'</p>' +
+    '</div>' +
+  '</div>' +
+  '<h2>Dados Pessoais</h2>' +
+  '<p><strong>CPF:</strong> '+hl(c.cpf)+' &nbsp; <strong>RG:</strong> '+hl(c.rg)+' &nbsp; <strong>PIS/PASEP/NIS:</strong> '+hl(c.pis)+'</p>' +
+  '<p><strong>Sexo:</strong> '+escapeHtml(c.sexo||'—')+' &nbsp; <strong>Nacionalidade:</strong> '+escapeHtml(c.nacionalidade||'—')+' &nbsp; <strong>Estado civil:</strong> '+escapeHtml(c.estadoCivil||'—')+'</p>' +
+  '<p><strong>Endereço:</strong> '+escapeHtml(c.endereco||'—')+'</p>' +
+  '<h2>Dados Contratuais</h2>' +
+  '<p><strong>Cargo:</strong> '+escapeHtml(c.funcao||'—')+' &nbsp; <strong>CBO:</strong> '+escapeHtml(c.cbo||'—')+' &nbsp; <strong>Obra/Lotação:</strong> '+escapeHtml(c.obra||'—')+'</p>' +
+  '<p><strong>Data de admissão:</strong> '+fmtData(c.dataAdmissao)+' &nbsp; <strong>Tipo de contrato:</strong> '+escapeHtml(c.tipoContrato==='indeterminado'?'Prazo indeterminado':(c.tipoContrato||'—'))+'</p>' +
+  '<p><strong>Salário:</strong> R$ '+escapeHtml(c.salario||'—')+' ('+escapeHtml(c.salarioExtenso||'—')+')</p>' +
+  '<h2>Segurança e Saúde Ocupacional</h2>' +
+  '<p><strong>Validade do ASO periódico:</strong> '+fmtData(c.asoValidade)+' &nbsp; <strong>Validade do treinamento NR:</strong> '+fmtData(c.treinoValidade)+'</p>' +
+  '<p style="margin-top:24px; font-size:11px; color:#888;">Ficha gerada automaticamente pelo sistema em '+new Date().toLocaleString('pt-BR')+'.</p>';
+}
+function logoBlock(){
+  if(empresa.logo){ return '<div class="doc-logo"><img src="'+empresa.logo+'" /></div>'; }
+  return '<div class="doc-logo"><span class="txt-logo">'+escapeHtml((empresa.nome||'').split(' ')[0])+'</span></div>';
+}
+function contratoHTML(c){
+  return logoBlock() +
+  '<h1>CONTRATO INDIVIDUAL DE TRABALHO</h1>' +
+  '<p><strong>EMPREGADORA:</strong> '+escapeHtml(empresa.nome)+', inscrita no CNPJ sob o nº '+hl(empresa.cnpj)+', com sede em '+hl(empresa.endereco)+', doravante denominada EMPREGADORA.</p>' +
+  '<p><strong>EMPREGADO(A):</strong> '+hl(c.nome)+', nacionalidade '+hl(c.nacionalidade)+', estado civil '+hl(c.estadoCivil)+', portador(a) do RG nº '+hl(c.rg)+' e CPF nº '+hl(c.cpf)+', residente em '+hl(c.endereco)+', doravante denominado(a) EMPREGADO(A).</p>' +
+  '<h2>Cláusula 1ª — Da Função</h2><p>O(A) EMPREGADO(A) é contratado(a) para exercer a função de '+hl(c.funcao)+', regendo-se este contrato pela CLT, pelas Normas Regulamentadoras aplicáveis (NR-01, NR-06, NR-18 e NR-35) e pelo Acordo Coletivo firmado com o SINTRACON-SE em vigor.</p>' +
+  '<h2>Cláusula 2ª — Da Remuneração</h2><p>O(A) EMPREGADO(A) perceberá remuneração mensal de R$ '+hl(c.salario)+' ('+hl(c.salarioExtenso)+'), além dos benefícios previstos no ACT em vigor, condicionados à assiduidade integral no mês anterior.</p>' +
+  '<h2>Cláusula 3ª — Da Assiduidade</h2><p>Faltas não justificadas geram desconto do dia, perda do Repouso Semanal Remunerado e perda dos benefícios vinculados à assiduidade, com gradação disciplinar de advertência escrita, suspensão de 1 a 3 dias e, em reincidência, justa causa (art. 482, "e", CLT).</p>' +
+  '<h2>Cláusula 4ª — Segurança do Trabalho</h2><p>É obrigatório o uso de EPI/EPC. O não uso, quando expuser a risco iminente a vida, constitui falta gravíssima (art. 158, parágrafo único, c/c art. 482 da CLT), dispensada a gradação disciplinar prévia.</p>' +
+  '<h2>Cláusula 5ª — Álcool, Drogas e Fumo</h2><p>Proibido o uso de álcool e drogas no ambiente de trabalho, bem como fumar (incluindo vape) em áreas internas de canteiro, almoxarifados e refeitórios, sob pena de justa causa.</p>' +
+  '<h2>Cláusula 6ª — Regimento Interno</h2><p>O(A) EMPREGADO(A) declara ter recebido o Regimento Interno e o Guia Rápido do Colaborador, que passam a integrar este contrato.</p>' +
+  '<h2>Cláusula 7ª — Cessão de Imagem</h2><p>Cessão gratuita e irretratável, durante a vigência contratual, do uso de imagem para portfólio institucional e divulgação da empresa, conforme LGPD.</p>' +
+  '<p style="margin-top:26px;">'+ hl(empresa.cidade) +', '+ (c.dataAdmissao ? fmtData(c.dataAdmissao) : '[DATA]') +'.</p>' +
+  '<div class="sign"><div class="line"></div>'+escapeHtml(empresa.nome)+' — Empregadora</div>' +
+  '<div class="sign"><div class="line"></div>'+escapeHtml(c.nome||'[NOME DO COLABORADOR]')+' — Empregado(a)</div>' +
+  '<p style="margin-top:30px; font-size:11px; color:#888;">Documento gerado automaticamente. Confira os campos destacados e faça a revisão jurídica final antes de assinar.</p>';
+}
+function termoHTML(c){
+  return logoBlock() +
+  '<h1>TERMO DE CIÊNCIA E RECEBIMENTO</h1>' +
+  '<p>Eu, '+hl(c.nome)+', portador(a) do CPF nº '+hl(c.cpf)+' e RG nº '+hl(c.rg)+', declaro para os devidos fins que recebi cópia do Regimento Interno de '+escapeHtml(empresa.nome)+', do Guia Rápido do Colaborador e do ACT em vigor, tendo sido orientado(a) sobre seu conteúdo — especialmente quanto às regras de segurança do trabalho (NR-06, NR-18 e NR-35), à proibição de álcool, drogas e fumo, às regras de assiduidade e benefícios, e às condutas passíveis de suspensão ou justa causa.</p>' +
+  '<p>Declaro estar ciente de que o descumprimento das regras acima poderá ensejar as sanções disciplinares e legais cabíveis, inclusive a rescisão por justa causa.</p>' +
+  '<p style="margin-top:26px;">'+ hl(empresa.cidade) +', '+ (c.dataAdmissao ? fmtData(c.dataAdmissao) : '[DATA]') +'.</p>' +
+  '<div class="sign"><div class="line"></div>'+escapeHtml(c.nome||'[NOME DO COLABORADOR]')+'</div>' +
+  '<div class="sign"><div class="line"></div>Testemunha 1</div>' +
+  '<div class="sign"><div class="line"></div>Testemunha 2</div>' +
+  '<p style="margin-top:30px; font-size:11px; color:#888;">Em caso de recusa de assinatura, registre a leitura em voz alta na presença de 2 testemunhas, conforme procedimento disciplinar do Regimento Interno.</p>';
+}
+function copyDoc(elId){
+  const el = document.getElementById(elId);
+  navigator.clipboard.writeText(el.innerText).then(()=>{ alert('Texto copiado! Cole em um editor de texto para ajustes finais.'); })
+  .catch(()=>{ alert('Não foi possível copiar automaticamente. Selecione o texto manualmente.'); });
+}
+
+/* ---------- CHECKLIST ---------- */
+function onChecklistColabChange(){
+  const colabId = document.getElementById('checklistColabSelect').value;
+  const c = colaboradores.find(x=>x.id===colabId);
+  if(c) document.getElementById('checklistTipo').value = c.status==='desligado' ? 'desligamento' : 'admissao';
+  renderChecklist();
+}
+async function renderChecklist(){
+  const colabId = document.getElementById('checklistColabSelect').value;
+  const tipo = document.getElementById('checklistTipo').value;
+  const card = document.getElementById('checklistCard');
+  if(!colabId){ card.style.display='none'; return; }
+  card.style.display='block';
+  const items = checklistItemsFor(tipo);
+  const state = await getChecklist(colabId, tipo);
+  const done = items.filter(i=>state[i.id]).length;
+  const pct = Math.round((done/items.length)*100);
+  document.getElementById('checklistPct').textContent = done+' de '+items.length+' concluídos ('+pct+'%)';
+  document.getElementById('checklistBar').style.width = pct+'%';
+  document.getElementById('checklistItems').innerHTML = items.map(i=>{
+    const checked = !!state[i.id];
+    return '<label class="checklist-item '+(checked?'done':'')+'">'+
+      '<input type="checkbox" '+(checked?'checked':'')+' onchange="toggleChecklist(\''+colabId+'\','+i.id+',this.checked,\''+tipo+'\')" />'+
+      '<div><div class="ci-text">'+escapeHtml(i.texto)+'</div><div class="ci-resp">Responsável: '+escapeHtml(i.resp)+'</div></div>'+
+    '</label>';
+  }).join('');
+}
+async function toggleChecklist(colabId, itemId, checked, tipo){
+  const state = await getChecklist(colabId, tipo);
+  state[itemId] = checked;
+  await setChecklist(colabId, state, tipo);
+  renderChecklist();
+}
+
+/* ---------- OCORRÊNCIAS DISCIPLINARES ---------- */
+async function getOcorrencias(colabId){
+  if(!db) return [];
+  try{
+    const snap = await db.collection('ocorrencias').where('colaboradorId','==',colabId).get();
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }catch(e){ console.error(e); return []; }
+}
+async function renderOcorrencias(){
+  const colabId = document.getElementById('ocorColabSelect').value;
+  const card = document.getElementById('ocorCard');
+  if(!colabId){ card.style.display='none'; return; }
+  card.style.display='block';
+  const list = await getOcorrencias(colabId);
+  const sorted = [...list].sort((a,b)=> (b.data||'').localeCompare(a.data||''));
+  if(sorted.length===0){
+    document.getElementById('ocorList').innerHTML = '<div class="empty-state">Nenhuma ocorrência registrada para este colaborador.</div>';
+    return;
+  }
+  document.getElementById('ocorList').innerHTML = sorted.map(o=>{
+    const fotosHTML = (o.fotos && o.fotos.length)
+      ? '<div style="display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;">'+o.fotos.map(f=>'<a href="'+f.url+'" target="_blank" rel="noopener"><img src="'+f.url+'" style="width:56px; height:56px; object-fit:cover; border-radius:6px; border:1px solid var(--line);" /></a>').join('')+'</div>'
+      : '';
+    return '<div class="checklist-item" style="align-items:center;">'+
+      '<div style="flex:1;">'+
+        '<div class="ci-text"><strong>'+escapeHtml(o.tipo)+'</strong> — '+fmtData(o.data)+'</div>'+
+        '<div class="ci-resp">'+escapeHtml(o.motivo||'—')+'</div>'+
+        fotosHTML+
+      '</div>'+
+      '<button class="btn btn-ghost" style="padding:5px 10px;" onclick="deleteOcorrencia(\''+colabId+'\',\''+o.id+'\')">Excluir</button>'+
+    '</div>';
+  }).join('');
+}
+function openOcorModal(){
+  const colabId = document.getElementById('ocorColabSelect').value;
+  if(!colabId){ alert('Selecione um colaborador primeiro.'); return; }
+  document.getElementById('ocorTipo').value = 'Advertência escrita';
+  document.getElementById('ocorData').value = new Date().toISOString().slice(0,10);
+  document.getElementById('ocorMotivo').value = '';
+  document.getElementById('ocorFotos').value = '';
+  document.getElementById('ocorFotosPreview').innerHTML = '';
+  setupDropzone('ocorFotosDropzone','ocorFotos');
+  document.getElementById('ocorModalBackdrop').classList.add('active');
+}
+function closeOcorModal(){ document.getElementById('ocorModalBackdrop').classList.remove('active'); }
+async function saveOcorrencia(){
+  const colabId = document.getElementById('ocorColabSelect').value;
+  const tipo = document.getElementById('ocorTipo').value;
+  const data = document.getElementById('ocorData').value;
+  const motivo = document.getElementById('ocorMotivo').value.trim();
+  if(!data){ alert('Informe a data da ocorrência.'); return; }
+  const arquivos = Array.from(document.getElementById('ocorFotos').files || []);
+  const id = 'o'+Date.now();
+  const fotos = [];
+  try{
+    for(const file of arquivos){
+      const path = 'colaboradores/'+colabId+'/ocorrencias/'+id+'_'+Date.now()+'_'+file.name;
+      const snapshot = await storage.ref(path).put(file);
+      const url = await snapshot.ref.getDownloadURL();
+      fotos.push({ url, path, nome: file.name });
+    }
+    await db.collection('ocorrencias').doc(id).set({ colaboradorId: colabId, tipo, data, motivo, fotos, ...auditFields(true) });
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  closeOcorModal();
+  renderOcorrencias();
+}
+async function deleteOcorrencia(colabId, ocorId){
+  if(!confirm('Excluir este registro de ocorrência? As fotos anexadas também serão apagadas.')) return;
+  try{
+    const doc = await db.collection('ocorrencias').doc(ocorId).get();
+    const fotos = (doc.exists && doc.data().fotos) || [];
+    for(const f of fotos){ if(f.path){ try{ await storage.ref(f.path).delete(); }catch(e){ console.error(e); } } }
+    await db.collection('ocorrencias').doc(ocorId).delete();
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); }
+  renderOcorrencias();
+}
+
+/* ---------- GESTÃO DE EPIs (módulo SESMT — NR-06) ---------- */
+let lastEpiColabId = null;
+let sigDrawing = false;
+let sigHasContent = false;
+
+function setupSignaturePad(){
+  const canvas = document.getElementById('epiSignCanvas');
+  if(!canvas) return;
+  if(!canvas.dataset.bound){
+    canvas.dataset.bound = '1';
+    const ctx = canvas.getContext('2d');
+    function pos(evt){
+      const rect = canvas.getBoundingClientRect();
+      const t = evt.touches && evt.touches[0];
+      const clientX = t ? t.clientX : evt.clientX;
+      const clientY = t ? t.clientY : evt.clientY;
+      return { x: clientX-rect.left, y: clientY-rect.top };
+    }
+    function start(evt){ evt.preventDefault(); sigDrawing = true; sigHasContent = true; const p = pos(evt); ctx.beginPath(); ctx.moveTo(p.x,p.y); }
+    function move(evt){ if(!sigDrawing) return; evt.preventDefault(); const p = pos(evt); ctx.lineTo(p.x,p.y); ctx.strokeStyle='#1c1c1c'; ctx.lineWidth=2.2; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.stroke(); }
+    function end(evt){ if(evt) evt.preventDefault(); sigDrawing = false; }
+    canvas.addEventListener('mousedown', start);
+    canvas.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', end);
+    canvas.addEventListener('touchstart', start, {passive:false});
+    canvas.addEventListener('touchmove', move, {passive:false});
+    canvas.addEventListener('touchend', end, {passive:false});
+  }
+  resizeSignatureCanvas();
+}
+function resizeSignatureCanvas(){
+  const canvas = document.getElementById('epiSignCanvas');
+  if(!canvas) return;
+  const ratio = window.devicePixelRatio || 1;
+  const displayWidth = canvas.clientWidth || 300;
+  const displayHeight = canvas.clientHeight || 150;
+  canvas.width = displayWidth*ratio;
+  canvas.height = displayHeight*ratio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio);
+}
+function clearSignature(){
+  const canvas = document.getElementById('epiSignCanvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  sigHasContent = false;
+}
+function onEpiRecusaChange(){
+  const checked = document.getElementById('epiRecusa').checked;
+  document.getElementById('epiTestemunhasWrap').style.display = checked ? 'grid' : 'none';
+  document.querySelector('.sign-pad-wrap').style.opacity = checked ? '0.4' : '1';
+}
+
+async function getEpis(colabId){
+  if(!db) return [];
+  try{
+    const snap = await db.collection('epis').where('colaboradorId','==',colabId).get();
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }catch(e){ console.error(e); return []; }
+}
+async function renderEpis(){
+  const colabId = document.getElementById('epiColabSelect').value;
+  const formCard = document.getElementById('epiFormCard');
+  const listCard = document.getElementById('epiListCard');
+  if(!colabId){ formCard.style.display='none'; listCard.style.display='none'; lastEpiColabId=null; return; }
+  formCard.style.display = 'block';
+  listCard.style.display = 'block';
+  if(colabId !== lastEpiColabId){
+    lastEpiColabId = colabId;
+    document.getElementById('epiRecusa').checked = false;
+    onEpiRecusaChange();
+    document.getElementById('epiTest1').value = '';
+    document.getElementById('epiTest2').value = '';
+  }
+  document.getElementById('epiData').value = document.getElementById('epiData').value || new Date().toISOString().slice(0,10);
+  setTimeout(()=>{ setupSignaturePad(); clearSignature(); }, 30);
+  const list = await getEpis(colabId);
+  const sorted = [...list].sort((a,b)=> (b.data||'').localeCompare(a.data||''));
+  if(sorted.length===0){
+    document.getElementById('epiList').innerHTML = '<div class="empty-state">Nenhum registro de EPI para este colaborador ainda.</div>';
+    return;
+  }
+  const rows = sorted.map(ep=>{
+    const tag = ep.statusEpi==='Devolvido' ? '<span class="tag">Devolvido</span>' : '<span class="alert-pill soon">Entregue</span>';
+    const provaTag = ep.recusaAssinatura ? '<span class="alert-pill late" title="Recusou assinar — testemunhado">Sem assinatura</span>' : '<span class="alert-pill soon" style="background:#e7efe9; color:#1F4E2C;" title="Assinado digitalmente">&#9997; Assinado</span>';
+    let substTag = '<span class="field-hint">—</span>';
+    if(ep.substituicaoPrevista && ep.statusEpi!=='Devolvido'){
+      const dias = daysUntil(ep.substituicaoPrevista);
+      substTag = dias<0 ? '<span class="alert-pill late">Vencido</span>' : (dias<=30 ? '<span class="alert-pill soon">'+fmtData(ep.substituicaoPrevista)+'</span>' : fmtData(ep.substituicaoPrevista));
+    }
+    return '<tr>'+
+      '<td><strong>'+escapeHtml(ep.nomeEpi||'—')+'</strong></td>'+
+      '<td>'+escapeHtml(ep.ca||'—')+'</td>'+
+      '<td>'+fmtData(ep.data)+'</td>'+
+      '<td>'+escapeHtml(String(ep.quantidade||'—'))+'</td>'+
+      '<td>'+tag+'</td>'+
+      '<td>'+substTag+'</td>'+
+      '<td>'+provaTag+'</td>'+
+      '<td class="row-actions">'+
+        '<button title="Ver recibo" onclick="verReciboEpi(\''+colabId+'\',\''+ep.id+'\')">&#128196;</button>'+
+        '<button title="Excluir" onclick="deleteEpi(\''+colabId+'\',\''+ep.id+'\')">&#128465;</button>'+
+      '</td></tr>';
+  }).join('');
+  document.getElementById('epiList').innerHTML = '<table><thead><tr><th>EPI</th><th>C.A.</th><th>Data</th><th>Qtd</th><th>Status</th><th>Substituir em</th><th>Prova</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+async function saveEpi(){
+  const colabId = document.getElementById('epiColabSelect').value;
+  if(!colabId){ alert('Selecione um colaborador.'); return; }
+  const nomeEpi = document.getElementById('epiNome').value.trim();
+  if(!nomeEpi){ alert('Informe o nome do EPI.'); return; }
+  const ca = document.getElementById('epiCa').value.trim();
+  const caValidade = document.getElementById('epiCaValidade').value;
+  const vidaUtilMeses = document.getElementById('epiVidaUtilMeses').value ? Number(document.getElementById('epiVidaUtilMeses').value) : null;
+  const data = document.getElementById('epiData').value;
+  const quantidade = Number(document.getElementById('epiQtd').value) || 1;
+  const statusEpi = document.getElementById('epiStatus').value;
+  const recusaAssinatura = document.getElementById('epiRecusa').checked;
+
+  // Data prevista de substituição: usa o menor entre "validade do C.A." e "data de entrega + vida útil"
+  let substituicaoPrevista = null;
+  if(vidaUtilMeses && data){
+    const d = new Date(data+'T00:00:00');
+    d.setMonth(d.getMonth()+vidaUtilMeses);
+    substituicaoPrevista = d.toISOString().slice(0,10);
+  }
+  if(caValidade && (!substituicaoPrevista || caValidade < substituicaoPrevista)) substituicaoPrevista = caValidade;
+
+  let assinaturaDataUrl = null, testemunha1 = null, testemunha2 = null;
+  if(recusaAssinatura){
+    testemunha1 = document.getElementById('epiTest1').value.trim();
+    testemunha2 = document.getElementById('epiTest2').value.trim();
+    if(!testemunha1 || !testemunha2){ alert('Em caso de recusa, informe o nome das 2 testemunhas — é o que garante o valor jurídico do registro.'); return; }
+  } else {
+    if(!sigHasContent){ alert('Colete a assinatura do colaborador na tela antes de registrar (ou marque "Colaborador se recusou a assinar").'); return; }
+    assinaturaDataUrl = document.getElementById('epiSignCanvas').toDataURL('image/png');
+  }
+
+  try{
+    const id = 'ep'+Date.now();
+    await db.collection('epis').doc(id).set({
+      colaboradorId: colabId, nomeEpi, ca, caValidade, vidaUtilMeses, substituicaoPrevista, data, quantidade, statusEpi,
+      recusaAssinatura, assinaturaDataUrl, testemunha1, testemunha2,
+      ...auditFields(true),
+    });
+    if(solicitacaoEmAtendimentoId){
+      await db.collection('epiSolicitacoes').doc(solicitacaoEmAtendimentoId).update({
+        status: 'Atendida', epiRegistroId: id, atendidaEm: new Date().toISOString(), ...auditFields(false),
+      });
+      const s = todasSolicitacoesEpi.find(x=>x.id===solicitacaoEmAtendimentoId);
+      if(s){ s.status = 'Atendida'; s.epiRegistroId = id; }
+      solicitacaoEmAtendimentoId = null;
+    }
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  todosEpis.push({ id, colaboradorId: colabId, nomeEpi, ca, caValidade, vidaUtilMeses, substituicaoPrevista, data, quantidade, statusEpi });
+
+  document.getElementById('epiNome').value = '';
+  document.getElementById('epiCa').value = '';
+  document.getElementById('epiCaValidade').value = '';
+  document.getElementById('epiVidaUtilMeses').value = '';
+  document.getElementById('epiQtd').value = 1;
+  document.getElementById('epiRecusa').checked = false;
+  document.getElementById('epiTest1').value = '';
+  document.getElementById('epiTest2').value = '';
+  onEpiRecusaChange();
+  clearSignature();
+  renderEpis();
+  renderPainel();
+}
+
+/* ---------- SOLICITAÇÃO DE TROCA DE EPI (com foto, para controlar o ciclo de vida) ---------- */
+let solicitacaoEmAtendimentoId = null;
+function daysSince(iso){ if(!iso) return null; const d = -daysUntil(iso); return d; }
+function ultimaEntregaInfo(colabId, nomeEpi){
+  const candidatos = todosEpis.filter(ep=>ep.colaboradorId===colabId && ep.nomeEpi && nomeEpi && ep.nomeEpi.trim().toLowerCase()===nomeEpi.trim().toLowerCase() && ep.statusEpi==='Entregue');
+  if(candidatos.length===0) return null;
+  candidatos.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const ultima = candidatos[0];
+  return { data: ultima.data, diasDesde: daysSince(ultima.data), vidaUtilMeses: ultima.vidaUtilMeses };
+}
+function renderEpiSolic(){
+  const colabId = document.getElementById('epiSolicColabSelect').value;
+  const solicitarCard = document.getElementById('epiSolicitarCard');
+  const solicitacoesCard = document.getElementById('epiSolicitacoesCard');
+  if(!colabId){ solicitarCard.style.display='none'; solicitacoesCard.style.display='none'; return; }
+  solicitarCard.style.display = 'block';
+  solicitacoesCard.style.display = 'block';
+  setupDropzone('solFotoDropzone','solFoto');
+  renderSolicitacoesEpi();
+}
+async function enviarSolicitacaoEpi(){
+  const colabId = document.getElementById('epiSolicColabSelect').value;
+  if(!colabId){ alert('Selecione um colaborador.'); return; }
+  const nomeEpi = document.getElementById('solNomeEpi').value.trim();
+  if(!nomeEpi){ alert('Informe o nome do EPI.'); return; }
+  const motivo = document.getElementById('solMotivo').value.trim();
+  const fileInput = document.getElementById('solFoto');
+  const file = fileInput.files[0];
+  const msgEl = document.getElementById('solMsg');
+  msgEl.textContent = 'Enviando…';
+  const id = 'sol'+Date.now();
+  let fotoUrl = null, fotoPath = null;
+  try{
+    if(file){
+      const path = 'colaboradores/'+colabId+'/epi_solicitacoes/'+id+'_'+file.name;
+      const snapshot = await storage.ref(path).put(file);
+      fotoUrl = await snapshot.ref.getDownloadURL();
+      fotoPath = path;
+    }
+    const dataSolicitacao = new Date().toISOString().slice(0,10);
+    await db.collection('epiSolicitacoes').doc(id).set({
+      colaboradorId: colabId, nomeEpi, motivo, fotoUrl, fotoPath, dataSolicitacao, status: 'Pendente',
+      ...auditFields(true),
+    });
+    todasSolicitacoesEpi.push({ id, colaboradorId: colabId, nomeEpi, motivo, fotoUrl, fotoPath, dataSolicitacao, status:'Pendente' });
+  }catch(e){ console.error(e); msgEl.textContent=''; alert(traduzErroDados(e)); return; }
+  msgEl.textContent = 'Enviado ✓';
+  document.getElementById('solNomeEpi').value = '';
+  document.getElementById('solMotivo').value = '';
+  fileInput.value = '';
+  document.getElementById('solFotoPreview').innerHTML = '';
+  renderSolicitacoesEpi();
+  renderPainel();
+}
+function renderSolicitacoesEpi(){
+  const colabId = document.getElementById('epiSolicColabSelect').value;
+  const wrap = document.getElementById('epiSolicitacoesList');
+  if(!wrap || !colabId) return;
+  const lista = todasSolicitacoesEpi.filter(s=>s.colaboradorId===colabId).sort((a,b)=>(b.dataSolicitacao||'').localeCompare(a.dataSolicitacao||''));
+  if(lista.length===0){ wrap.innerHTML = '<div class="field-hint">Nenhuma solicitação registrada para este colaborador.</div>'; return; }
+  const podeAtender = currentUserRole==='admin' || currentUserRole==='sesmt';
+  wrap.innerHTML = lista.map(s=>{
+    const info = ultimaEntregaInfo(colabId, s.nomeEpi);
+    const infoTxt = info
+      ? 'Última entrega: '+fmtData(info.data)+' ('+info.diasDesde+' dia(s) atrás'+(info.vidaUtilMeses ? ', vida útil prevista '+info.vidaUtilMeses+' meses — '+(info.diasDesde < info.vidaUtilMeses*30 ? 'pedido ANTES do previsto, vale checar o motivo' : 'dentro do esperado') : '')+')'
+      : 'Sem entrega anterior deste EPI registrada no sistema.';
+    const statusTag = s.status==='Pendente' ? '<span class="alert-pill soon">Pendente</span>' : s.status==='Atendida' ? '<span class="tag">Atendida</span>' : '<span class="alert-pill late">Recusada</span>';
+    const fotoHTML = s.fotoUrl ? '<a href="'+s.fotoUrl+'" target="_blank" rel="noopener"><img src="'+s.fotoUrl+'" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--line); margin-top:6px;" /></a>' : '';
+    const acoes = (podeAtender && s.status==='Pendente')
+      ? '<div class="btn-row" style="margin-top:8px; margin-bottom:0;"><button class="btn btn-ghost" style="padding:5px 10px;" onclick="atenderSolicitacaoEpi(\''+s.id+'\')">Atender (ir para registro de entrega)</button><button class="btn btn-ghost" style="padding:5px 10px;" onclick="recusarSolicitacaoEpi(\''+s.id+'\')">Recusar</button></div>'
+      : '';
+    return '<div class="checklist-item" style="align-items:flex-start;">'+
+      '<div style="flex:1;">'+
+        '<div class="ci-text"><strong>'+escapeHtml(s.nomeEpi)+'</strong> — '+fmtData(s.dataSolicitacao)+' '+statusTag+'</div>'+
+        '<div class="ci-resp">'+escapeHtml(s.motivo||'—')+'</div>'+
+        '<div class="ci-resp" style="margin-top:4px;">'+infoTxt+'</div>'+
+        fotoHTML + acoes +
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+function atenderSolicitacaoEpi(id){
+  if(currentUserRole!=='admin' && currentUserRole!=='sesmt'){ alert('Só Admin ou SESMT podem atender solicitações.'); return; }
+  const s = todasSolicitacoesEpi.find(x=>x.id===id);
+  if(!s) return;
+  solicitacaoEmAtendimentoId = id;
+  showView('epis');
+  switchEpiTab(2);
+  document.getElementById('epiColabSelect').value = s.colaboradorId;
+  renderEpis().then(()=>{
+    document.getElementById('epiNome').value = s.nomeEpi;
+    document.getElementById('epiData').value = new Date().toISOString().slice(0,10);
+    document.getElementById('epiStatus').value = 'Entregue';
+  });
+}
+async function recusarSolicitacaoEpi(id){
+  const motivoRecusa = prompt('Motivo da recusa (opcional):') || '';
+  try{
+    await db.collection('epiSolicitacoes').doc(id).update({ status:'Recusada', motivoRecusa, ...auditFields(false) });
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  const s = todasSolicitacoesEpi.find(x=>x.id===id);
+  if(s){ s.status='Recusada'; s.motivoRecusa = motivoRecusa; }
+  renderSolicitacoesEpi();
+  renderPainel();
+}
+
+async function deleteEpi(colabId, epiId){
+  if(!confirm('Excluir este registro de EPI?')) return;
+  try{ await db.collection('epis').doc(epiId).delete(); }
+  catch(e){ console.error(e); alert(traduzErroDados(e)); }
+  todosEpis = todosEpis.filter(ep=>ep.id!==epiId);
+  renderEpis();
+  renderPainel();
+}
+function epiReciboHTML(colabId, ep){
+  const c = colaboradores.find(x=>x.id===colabId) || {};
+  const acao = ep.statusEpi==='Devolvido' ? 'DEVOLUÇÃO' : 'ENTREGA';
+  const verbo = ep.statusEpi==='Devolvido' ? 'devolvi' : 'recebi';
+  let assinBlock;
+  if(ep.recusaAssinatura){
+    assinBlock =
+      '<p style="margin-top:26px;"><strong>Assinatura não coletada — o(a) colaborador(a) se recusou a assinar.</strong> O recebimento/devolução foi presenciado e é atestado pelas testemunhas abaixo (Regimento Interno, art. 34, aplicado por analogia).</p>' +
+      '<div class="sign"><div class="line"></div>Testemunha 1 — '+escapeHtml(ep.testemunha1||'')+'</div>' +
+      '<div class="sign"><div class="line"></div>Testemunha 2 — '+escapeHtml(ep.testemunha2||'')+'</div>';
+  } else {
+    assinBlock = '<div style="text-align:center; margin-top:28px;">'+
+      '<img src="'+ep.assinaturaDataUrl+'" style="max-width:320px; max-height:110px;" />' +
+      '<div style="border-top:1px solid #333; width:300px; margin:2px auto 4px auto;"></div>' +
+      '<p style="font-size:11px; color:#888;">Assinatura do(a) colaborador(a)</p></div>';
+  }
+  return logoBlock() +
+    '<h1>RECIBO DE '+acao+' DE EPI</h1>' +
+    '<p style="text-align:center; color:#888; font-size:12px;">'+escapeHtml(empresa.nome)+' &middot; CNPJ '+hl(empresa.cnpj)+'</p>' +
+    '<p><strong>Colaborador:</strong> '+escapeHtml(c.nome||'—')+' &nbsp; <strong>CPF:</strong> '+escapeHtml(c.cpf||'—')+'</p>' +
+    '<p><strong>Função:</strong> '+escapeHtml(c.funcao||'—')+' &nbsp; <strong>Obra/Lotação:</strong> '+escapeHtml(c.obra||'—')+'</p>' +
+    '<h2>Equipamento</h2>' +
+    '<p><strong>EPI:</strong> '+escapeHtml(ep.nomeEpi)+' &nbsp; <strong>C.A.:</strong> '+escapeHtml(ep.ca||'—')+' &nbsp; <strong>Quantidade:</strong> '+escapeHtml(String(ep.quantidade))+'</p>' +
+    '<p><strong>Data:</strong> '+fmtData(ep.data)+'</p>' +
+    '<p style="margin-top:16px;">Declaro, para os devidos fins e nos termos da NR-06, que '+verbo+' o(s) Equipamento(s) de Proteção Individual acima descrito(s), em perfeitas condições de uso, tendo sido orientado(a) quanto à obrigatoriedade do uso correto, guarda e conservação, conforme o Regimento Interno da empresa.</p>' +
+    assinBlock +
+    '<p style="margin-top:30px; font-size:11px; color:#888;">Registrado por '+escapeHtml(ep.createdBy||'—')+' em '+ (ep.updatedAt ? new Date(ep.updatedAt).toLocaleString('pt-BR') : '—') +'. Documento gerado automaticamente pelo sistema.</p>';
+}
+async function verReciboEpi(colabId, epiId){
+  const list = await getEpis(colabId);
+  const ep = list.find(x=>x.id===epiId);
+  if(!ep){ alert('Registro não encontrado.'); return; }
+  document.getElementById('epiReciboSheet').innerHTML = epiReciboHTML(colabId, ep);
+  showView('epirecibo');
+}
+
+function historicoEpisHTML(colabId, lista){
+  const c = colaboradores.find(x=>x.id===colabId) || {};
+  const linhas = lista.map(ep=>{
+    const acao = ep.statusEpi==='Devolvido' ? 'Devolução' : 'Entrega';
+    const prova = ep.recusaAssinatura ? 'Testemunhas: '+escapeHtml(ep.testemunha1||'')+' / '+escapeHtml(ep.testemunha2||'') : 'Assinado digitalmente na entrega';
+    return '<tr>'+
+      '<td style="padding:5px; border-bottom:1px solid #ddd;">'+fmtData(ep.data)+'</td>'+
+      '<td style="padding:5px; border-bottom:1px solid #ddd;">'+escapeHtml(ep.nomeEpi)+'</td>'+
+      '<td style="padding:5px; border-bottom:1px solid #ddd;">'+escapeHtml(ep.ca||'—')+'</td>'+
+      '<td style="padding:5px; border-bottom:1px solid #ddd;">'+escapeHtml(String(ep.quantidade))+'</td>'+
+      '<td style="padding:5px; border-bottom:1px solid #ddd;">'+acao+'</td>'+
+      '<td style="padding:5px; border-bottom:1px solid #ddd; font-size:10.5px; color:#666;">'+prova+'</td>'+
+    '</tr>';
+  }).join('');
+  return logoBlock() +
+    '<h1>HISTÓRICO CONSOLIDADO DE ENTREGA DE EPI</h1>' +
+    '<p style="text-align:center; color:#888; font-size:12px;">'+escapeHtml(empresa.nome)+' &middot; CNPJ '+hl(empresa.cnpj)+'</p>' +
+    '<p><strong>Colaborador:</strong> '+escapeHtml(c.nome||'—')+' &nbsp; <strong>CPF:</strong> '+escapeHtml(c.cpf||'—')+' &nbsp; <strong>Matrícula:</strong> '+escapeHtml(c.matricula||'—')+'</p>' +
+    '<p><strong>Função:</strong> '+escapeHtml(c.funcao||'—')+' &nbsp; <strong>Obra/Lotação:</strong> '+escapeHtml(c.obra||'—')+'</p>' +
+    '<table style="width:100%; border-collapse:collapse; margin-top:14px; font-size:11.5px;">' +
+      '<thead><tr>'+['Data','EPI','C.A.','Qtd','Ação','Registro de prova'].map(h=>'<th style="text-align:left; padding:5px; border-bottom:2px solid #333; font-size:10.5px; text-transform:uppercase; color:#555;">'+h+'</th>').join('')+'</tr></thead>' +
+      '<tbody>'+(linhas || '<tr><td colspan="6" style="padding:10px; text-align:center; color:#888;">Nenhum registro.</td></tr>')+'</tbody>' +
+    '</table>' +
+    '<p style="margin-top:20px;">Declaro, para os devidos fins e nos termos da NR-06, estar ciente de todas as entregas e devoluções de Equipamentos de Proteção Individual listadas acima, tendo recebido treinamento e orientação quanto ao uso correto, guarda e conservação de cada equipamento.</p>' +
+    '<p style="margin-top:6px; font-size:11px; color:#888;">Esta assinatura física complementa (não substitui) as assinaturas digitais individuais já coletadas no ato de cada entrega, reforçando a validade probatória do registro perante eventual questionamento judicial.</p>' +
+    '<div class="sign" style="margin-top:40px;"><div class="line"></div>'+escapeHtml(c.nome||'[NOME DO COLABORADOR]')+' — assinatura física</div>' +
+    '<p style="margin-top:10px;">'+ hl(empresa.cidade) +', ____ de ____________ de '+new Date().getFullYear()+'.</p>' +
+    '<p style="margin-top:26px; font-size:11px; color:#888;">Documento gerado automaticamente pelo sistema em '+new Date().toLocaleString('pt-BR')+'.</p>';
+}
+async function imprimirHistoricoEpis(){
+  const colabId = document.getElementById('epiColabSelect').value;
+  if(!colabId){ alert('Selecione um colaborador.'); return; }
+  const lista = (await getEpis(colabId)).sort((a,b)=> (a.data||'').localeCompare(b.data||''));
+  document.getElementById('epiReciboSheet').innerHTML = historicoEpisHTML(colabId, lista);
+  showView('epirecibo');
+  printView('epirecibo');
+}
+
+/* ---------- DOCUMENTOS ANEXOS (Firebase Storage) ---------- */
+async function uploadDocumento(){
+  const fileInput = document.getElementById('docFile');
+  const file = fileInput.files[0];
+  if(!file){ alert('Escolha um arquivo primeiro.'); return; }
+  const tipo = document.getElementById('docTipo').value;
+  const msgEl = document.getElementById('docUploadMsg');
+  msgEl.textContent = 'Enviando…';
+  let colabId;
+  try{ colabId = await ensureDraftDoc(); }catch(e){ msgEl.textContent=''; return; }
+  try{
+    const path = 'colaboradores/'+colabId+'/'+Date.now()+'_'+file.name;
+    const snapshot = await storage.ref(path).put(file);
+    const url = await snapshot.ref.getDownloadURL();
+    const entry = { nome: file.name, tipo, url, path, uploadedAt: new Date().toISOString() };
+    const c = colaboradores.find(x=>x.id===colabId);
+    const docs = ((c && c.documentos) || []).concat([entry]);
+    await db.collection('colaboradores').doc(colabId).update({ documentos: docs, ...auditFields(false) });
+    if(c) c.documentos = docs;
+    msgEl.textContent = 'Enviado ✓';
+    fileInput.value = '';
+    renderDocList(colabId);
+  }catch(e){
+    console.error(e);
+    msgEl.textContent = '';
+    alert(traduzErroDados(e));
+  }
+}
+async function deleteDocumento(colabId, url){
+  if(!confirm('Remover este documento?')) return;
+  const c = colaboradores.find(x=>x.id===colabId);
+  if(!c) return;
+  const alvo = (c.documentos||[]).find(d=>d.url===url);
+  const docs = (c.documentos||[]).filter(d=>d.url!==url);
+  try{
+    if(alvo && alvo.path){ try{ await storage.ref(alvo.path).delete(); }catch(e){ console.error('Falha ao remover do Storage (prosseguindo):', e); } }
+    await db.collection('colaboradores').doc(colabId).update({ documentos: docs, ...auditFields(false) });
+    c.documentos = docs;
+    renderDocList(colabId);
+  }catch(e){ console.error(e); alert(traduzErroDados(e)); }
+}
+function renderDocList(colabId){
+  const c = colaboradores.find(x=>x.id===colabId);
+  const docs = (c && c.documentos) || [];
+  const wrap = document.getElementById('docList');
+  if(docs.length===0){ wrap.innerHTML = '<div class="field-hint">Nenhum documento anexado ainda.</div>'; return; }
+  wrap.innerHTML = docs.map(d=>
+    '<div class="alert-row"><a href="'+d.url+'" target="_blank" rel="noopener">'+escapeHtml(d.tipo)+' — '+escapeHtml(d.nome)+'</a>'+
+    '<button class="btn btn-ghost" style="padding:3px 9px;" type="button" onclick="deleteDocumento(\''+colabId+'\',\''+d.url.replace(/'/g,"\\'")+'\')">Remover</button></div>'
+  ).join('');
+}
+
+/* ---------- REGIMENTO / GUIA ---------- */
+function renderPadrao(){
+  const doc = document.getElementById('padraoDocSelect').value;
+  document.getElementById('padraoSheet').innerHTML = doc==='guia' ? guiaHTML() : regimentoHTML();
+}
+function rArt(num, texto){ return '<p><strong>'+num+'</strong> '+texto+'</p>'; }
+function regimentoHTML(){
+  const p = hl(empresa.cnpj), e = hl(empresa.endereco);
+  return logoBlock() +
+  '<h1>REGIMENTO INTERNO</h1>' +
+  '<p style="text-align:center; color:#888; font-size:12px;">'+escapeHtml(empresa.nome)+' &middot; CNPJ '+p+'</p>' +
+
+  '<h2>Capítulo I — Disposições Preliminares</h2>' +
+  rArt('Art. 1º', 'O presente Regimento Interno tem por finalidade estabelecer normas de conduta, organização, direitos e deveres dos colaboradores de '+escapeHtml(empresa.nome)+', inscrita no CNPJ sob o nº '+p+', com sede em '+e+', em conformidade com a Consolidação das Leis do Trabalho (CLT), as Normas Regulamentadoras (NRs) pertinentes à Indústria da Construção Civil e o Acordo Coletivo de Trabalho firmado com o SINTRACON-SE em vigor.') +
+  rArt('Art. 2º', 'Este Regimento é obrigatório a todos os empregados, estagiários, terceirizados e prestadores de serviços que atuem nas dependências da empresa ou em obras sob sua responsabilidade. A ciência e concordância com este documento são condições para a manutenção do vínculo.') +
+
+  '<h2>Capítulo II — Jornada de Trabalho e Frequência</h2>' +
+  rArt('Art. 3º', 'A jornada de trabalho será cumprida de segunda a sexta-feira: (a) segunda a quinta-feira, das 07h00 às 17h00, com 1h de intervalo; (b) sexta-feira, das 07h00 às 16h00, com 1h de intervalo. Jornada semanal total de 44 horas, respeitado o limite legal da CLT.') +
+  rArt('Art. 4º', 'O controle de frequência é feito por ponto digital, sendo responsabilidade do colaborador registrar entrada, saída para intervalo, retorno e saída final. Esquecimento deve ser regularizado no aplicativo; reincidência sujeita a penalidades.') +
+  rArt('Art. 5º', 'Atrasos, saídas antecipadas e ausências devem ser previamente comunicados e justificados. A ausência não justificada sujeita o colaborador, cumulativamente, a: (i) desconto do dia; (ii) perda do Repouso Semanal Remunerado; e (iii) perda dos benefícios do ACT vinculados à assiduidade. Gradação disciplinar: 1ª ocorrência — advertência escrita; reincidência — suspensão de 1 a 3 dias; nova reincidência — dispensa por justa causa (art. 482, "e", CLT).') +
+  rArt('Art. 6º', 'Horas extras somente com autorização prévia e expressa do superior hierárquico, remuneradas conforme a legislação vigente.') +
+  rArt('Art. 7º', 'A compensação de horas (banco de horas ou trocas) deve ocorrer dentro do mesmo mês de competência, salvo previsão diversa em acordo coletivo.') +
+
+  '<h2>Capítulo III — Segurança e Saúde no Trabalho</h2>' +
+  rArt('Art. 8º', 'A empresa cumpre as Normas Regulamentadoras do MTE, com especial atenção à NR-01 (Gerenciamento de Riscos Ocupacionais), NR-06 (EPI), NR-18 (Condições no Canteiro) e NR-35 (Trabalho em Altura).') +
+  rArt('Art. 9º', 'É obrigação de todo colaborador: utilizar e conservar os EPIs fornecidos; participar de treinamentos e Diálogos Diários de Segurança (DDS); zelar pela própria segurança e a de terceiros; comunicar imediatamente qualquer risco, acidente ou incidente; manter o local de trabalho limpo e organizado.') +
+  rArt('Art. 10.', 'A empresa fornece gratuitamente os EPIs necessários e promove a CIPA e o PGR.') +
+  rArt('Art. 11.', 'É proibido o ingresso, posse, comercialização ou uso de bebidas alcoólicas e substâncias entorpecentes nas dependências, canteiros e veículos da empresa. É igualmente proibido fumar — incluindo cigarro eletrônico/vape — em áreas internas de canteiro, frentes de trabalho, almoxarifados e refeitórios, permitido apenas em áreas externas autorizadas, no intervalo. O descumprimento caracteriza falta grave (art. 482, CLT), podendo gerar afastamento imediato do canteiro.') +
+  rArt('Art. 12.', 'O não uso de EPI, a adulteração de equipamentos de segurança ou a burla a proteções coletivas, quando expuserem a risco iminente a vida ou integridade física própria ou de terceiros (ex.: altura sem linha de vida, remoção de proteção coletiva), constituem <strong>ato faltoso gravíssimo</strong> (art. 158, parágrafo único, c/c art. 482, "h" e "j", CLT), ensejando afastamento imediato e suspensão ou dispensa por justa causa, <strong>dispensada a gradação disciplinar prévia</strong> em razão do risco concreto à vida.') +
+
+  '<h2>Capítulo IV — Conduta e Disciplina</h2>' +
+  rArt('Art. 13.', 'Espera-se de todos: cordialidade e respeito; urbanidade; dedicação; honestidade e lealdade; zelo pelos bens da empresa; respeito à hierarquia.') +
+  rArt('Art. 14.', 'É proibido o uso de celular pessoal para fins não relacionados ao trabalho durante o expediente, salvo urgência autorizada. Reincidência gera advertência, suspensão ou, em casos extremos, justa causa. A empresa não se responsabiliza por danos a aparelhos pessoais.') +
+  rArt('Art. 15.', 'Constituem faltas disciplinares: desídia; desacato ou insubordinação; violência física ou verbal; assédio moral ou sexual; uso indevido de bens ou informações; falsificação de documentos, inclusive registro de ponto; qualquer ato que atente contra a moral ou a imagem da empresa.') +
+
+  '<h2>Capítulo V — Organização e Hierarquia</h2>' +
+  rArt('Art. 16.', 'Estrutura hierárquica: Diretoria; Gerentes de Departamento; Coordenadores/Engenheiros; Supervisores/Mestres de Obra; Colaboradores técnicos e administrativos; Colaboradores operacionais.') +
+  rArt('Art. 17.', 'As ordens devem seguir o fluxo hierárquico. Dúvidas operacionais devem ser sanadas com o supervisor imediato.') +
+  rArt('Art. 18.', 'A empresa valoriza comunicação clara e aberta; sugestões podem ser encaminhadas aos superiores ou canais definidos pela Diretoria.') +
+
+  '<h2>Capítulo VI — Uso de Equipamentos, Ferramentas e Materiais</h2>' +
+  rArt('Art. 19.', 'Equipamentos, ferramentas, veículos e materiais são de propriedade da empresa e devem ser usados exclusivamente para fins profissionais.') +
+  rArt('Art. 20.', 'Danos causados por uso indevido, negligência, imprudência, imperícia ou dolo podem implicar responsabilidade de reparação e/ou desconto salarial (art. 462, §1º, CLT).') +
+  rArt('Art. 21.', 'É vedado o uso pessoal de equipamentos da empresa sem autorização expressa e por escrito.') +
+  rArt('Art. 22.', 'Ao final da jornada, equipamentos devem ser guardados em local apropriado, seguro e limpo.') +
+
+  '<h2>Capítulo VII — Relações Trabalhistas e Contratação</h2>' +
+  rArt('Art. 23.', 'Contratações seguem critérios de igualdade de oportunidades, vedada qualquer discriminação.') +
+  rArt('Art. 24.', 'A admissão está sujeita a exames admissionais e apresentação de toda a documentação exigida por lei.') +
+  rArt('Art. 25.', 'Condições contratuais são formalizadas na CTPS e em contrato individual de trabalho, não podendo ser alteradas unilateralmente.') +
+  rArt('Art. 26.', 'A rescisão segue as normas da CLT e do ACT SINTRACON-SE aplicável.') +
+
+  '<h2>Capítulo VIII — Confidencialidade e Propriedade Intelectual</h2>' +
+  rArt('Art. 27.', 'O colaborador mantém sigilo absoluto sobre informações confidenciais: projetos e métodos construtivos; dados financeiros e comerciais; listas de clientes e fornecedores; outras informações não públicas — mesmo após o término do contrato.') +
+  rArt('Art. 28.', 'Invenções, projetos e criações desenvolvidas no exercício das funções são de propriedade exclusiva da empresa.') +
+
+  '<h2>Capítulo IX — Saúde Mental, Retorno de Afastamento e Imagem</h2>' +
+  rArt('Art. 29.', 'Em caso de afastamento previdenciário, o colaborador deve comunicar a alta médica e retornar ao trabalho em até 30 dias, sob pena de indício de abandono de emprego (Súmula 32, TST).') +
+  rArt('Art. 30.', 'O colaborador deve comunicar condições de saúde física ou mental que possam afetar a segurança própria ou de colegas. A empresa reconhece a natureza multifatorial e frequentemente extralaboral de quadros de saúde mental, sem presunção automática de nexo com o trabalho.') +
+  rArt('Art. 31.', 'O colaborador cede, de forma gratuita e irretratável enquanto vigente o contrato, o uso de sua imagem em ambiente de trabalho para portfólio institucional e divulgação, conforme a LGPD, podendo revogar a autorização para usos futuros por comunicação escrita.') +
+
+  '<h2>Capítulo X — Penalidades e Medidas Disciplinares</h2>' +
+  rArt('Art. 32.', 'Penalidades, conforme gravidade e reincidência: (a) advertência verbal; (b) advertência escrita; (c) suspensão de até 30 dias; (d) demissão por justa causa — incluindo as hipóteses do art. 12, que dispensam gradação prévia.') +
+  rArt('Art. 33.', 'A aplicação de penalidade é precedida de apuração dos fatos, com direito à ampla defesa, ressalvado o afastamento cautelar imediato em casos de risco iminente à vida (art. 12).') +
+  rArt('Art. 34.', 'Caso o colaborador se recuse a assinar o documento de penalidade, este será lido em voz alta na presença de <strong>2 (duas) testemunhas</strong>, que assinarão atestando a recusa e a ciência verbal, dispensada a assinatura do colaborador para validade da medida.') +
+  rArt('Art. 35.', 'A decisão final sobre penalidades, exceto justa causa (ato da Diretoria), compete ao Gerente de Departamento em conjunto com o RH.') +
+
+  '<h2>Capítulo XI — Disposições Finais</h2>' +
+  rArt('Art. 36.', 'Este Regimento entra em vigor na data de sua publicação e mediante assinatura do Termo de Ciência e Concordância por todos os colaboradores.') +
+  rArt('Art. 37.', 'Casos omissos ou dúvidas de interpretação serão resolvidos pela Diretoria, em consonância com a legislação trabalhista e o ACT SINTRACON-SE em vigor.') +
+
+  '<p style="margin-top:26px; text-align:center;">'+ hl(empresa.cidade) +', ______ de ______________ de 2026.</p>' +
+  '<div class="sign"><div class="line"></div>Assinatura do Representante Legal — '+escapeHtml(empresa.nome)+'</div>' +
+  '<p style="margin-top:30px; font-size:11px; color:#888;">Documento gerado a partir dos dados cadastrados. Confira os campos destacados antes de publicar ou colher assinaturas — recomenda-se revisão jurídica final.</p>';
+}
+function guiaHTML(){
+  return logoBlock() +
+  '<h1>GUIA RÁPIDO DO COLABORADOR</h1>' +
+  '<p style="text-align:center; color:#888; font-size:12px;">'+escapeHtml(empresa.nome)+'</p>' +
+  '<h2>&#129496; Segurança em primeiro lugar</h2><p>Use sempre o seu EPI. Trabalho em altura só com cinto preso na linha de vida.</p>' +
+  '<h2>&#128683; Álcool, drogas e cigarro</h2><p>Proibido usar álcool e drogas na obra. Proibido fumar (inclusive vape) dentro do canteiro.</p>' +
+  '<h2>&#9200; Faltas e atrasos</h2><p>Falta sem justificativa gera desconto do dia e pode gerar advertência, suspensão ou justa causa em reincidência.</p>' +
+  '<h2>&#127973; Voltando do INSS</h2><p>Avise o RH assim que receber alta e volte em até 30 dias.</p>' +
+  '<h2>&#129504; Saúde mental</h2><p>Se algo estiver afetando sua segurança no trabalho, converse com o RH.</p>' +
+  '<h2>&#128248; Uso de imagem</h2><p>Fotos suas na obra podem entrar no portfólio da empresa. Para não aparecer em fotos futuras, avise o RH por escrito.</p>' +
+  '<p style="margin-top:24px; font-size:11px; color:#888;">Versão resumida para consulta rápida.</p>';
+}
+
+/* ---------- EMPRESA (edição) ---------- */
+function renderEmpresaForm(){
+  document.getElementById('empRazaoSocial').value = empresa.nome || '';
+  document.getElementById('empCnpj').value = empresa.cnpj || '';
+  document.getElementById('empEndereco').value = empresa.endereco || '';
+  document.getElementById('empCidade').value = empresa.cidade || '';
+  document.getElementById('empAccentColor').value = empresa.accent || '#001C7D';
+  document.getElementById('empLogoPreview').innerHTML = empresa.logo ? '<img src="'+empresa.logo+'" />' : '—';
+  document.getElementById('accentHint').textContent = 'Cor atual da empresa.';
+  document.getElementById('suggestedSwatches').innerHTML = '';
+  document.getElementById('empSaveMsg').textContent = '';
+  pendingLogo = null;
+}
+async function handleLogoUpload(evt){
+  const file = evt.target.files[0]; if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async ()=>{
+    const dataUrl = reader.result;
+    document.getElementById('empLogoPreview').innerHTML = '<img src="'+dataUrl+'" />';
+    pendingLogo = dataUrl;
+    document.getElementById('accentHint').textContent = 'Detectando cores da logo…';
+    const colors = await extractPalette(dataUrl);
+    document.getElementById('empAccentColor').value = colors[0];
+    document.getElementById('accentHint').textContent = 'Cor sugerida a partir da logo — clique em outra opção abaixo ou ajuste livremente.';
+    document.getElementById('suggestedSwatches').innerHTML = colors.map(c=>
+      '<button type="button" class="swatch" style="background:'+c+';" title="'+c+'" onclick="document.getElementById(\'empAccentColor\').value=\''+c+'\'"></button>'
+    ).join('');
+  };
+  reader.readAsDataURL(file);
+}
+function removeLogo(){ pendingLogo = 'REMOVE'; document.getElementById('empLogoPreview').innerHTML = '—'; }
+
+async function saveEmpresaForm(){
+  empresa.nome = document.getElementById('empRazaoSocial').value.trim() || empresa.nome;
+  empresa.cnpj = document.getElementById('empCnpj').value.trim();
+  empresa.endereco = document.getElementById('empEndereco').value.trim();
+  empresa.cidade = document.getElementById('empCidade').value.trim();
+  empresa.accent = document.getElementById('empAccentColor').value;
+  if(pendingLogo === 'REMOVE') empresa.logo = null;
+  else if(pendingLogo) empresa.logo = pendingLogo;
+  Object.assign(empresa, auditFields(false));
+  await saveEmpresaStore();
+  document.getElementById('empSaveMsg').textContent = 'Salvo ✓';
+  applyTheme(empresa.accent);
+  renderBrand();
+  renderContrato();
+  renderPadrao();
+}
+
+/* =========================================================================
+   USUÁRIOS (perfis de acesso) — somente Admin vê e edita esta tela
+========================================================================= */
+let usuarios = [];
+async function loadUsuarios(){
+  if(!db || currentUserRole!=='admin') return;
+  try{
+    const snap = await db.collection('usuarios').get();
+    usuarios = snap.docs.map(d=>({ email:d.id, ...d.data() }));
+  }catch(e){ console.error('usuarios', e); usuarios = []; }
+}
+async function renderUsuariosTable(){
+  const wrap = document.getElementById('usuariosTableWrap');
+  if(!wrap) return;
+  if(currentUserRole!=='admin'){
+    wrap.innerHTML = '<div class="empty-state">Só o perfil Admin pode gerenciar usuários.</div>';
+    return;
+  }
+  await loadUsuarios();
+  if(usuarios.length===0){
+    wrap.innerHTML = '<div class="empty-state"><div class="big">&#128100;</div>Nenhum usuário cadastrado ainda (além dos e-mails fixos de Admin no código).</div>';
+    return;
+  }
+  const rows = usuarios.map(u=>{
+    return '<tr>'+
+      '<td><strong>'+escapeHtml(u.nome||u.email)+'</strong><br><span style="color:var(--ink-soft); font-size:11.5px;">'+escapeHtml(u.email)+'</span></td>'+
+      '<td><span class="tag">'+rotuloPapel(u.papel)+'</span></td>'+
+      '<td>'+escapeHtml(u.obra||'—')+'</td>'+
+      '<td class="row-actions">'+
+        '<button title="Editar" onclick="openUsuarioModal(\''+u.email+'\')">&#9998;</button>'+
+        '<button title="Excluir" onclick="deleteUsuario(\''+u.email+'\')">&#128465;</button>'+
+      '</td></tr>';
+  }).join('');
+  wrap.innerHTML = '<table><thead><tr><th>Usuário</th><th>Perfil</th><th>Obra (se Engenheiro)</th><th></th></tr></thead><tbody>'+rows+'</tbody></table>';
+}
+function onUsuarioPapelChange(){
+  document.getElementById('usuarioObraWrap').style.display = document.getElementById('usuarioPapel').value==='engenheiro' ? 'block' : 'none';
+}
+function openUsuarioModal(email){
+  populateObraSelectColab(); // reaproveita a lista de obras já carregada
+  const selObra = document.getElementById('usuarioObra');
+  selObra.innerHTML = obras.map(o=>'<option value="'+escapeHtml(o.nome)+'">'+escapeHtml(o.nome)+'</option>').join('');
+  document.getElementById('usuarioModalTitle').textContent = email ? 'Editar usuário' : 'Novo usuário';
+  document.getElementById('usuarioEmailOriginal').value = email || '';
+  if(email){
+    const u = usuarios.find(x=>x.email===email);
+    document.getElementById('usuarioEmail').value = u.email;
+    document.getElementById('usuarioEmail').disabled = true;
+    document.getElementById('usuarioNome').value = u.nome||'';
+    document.getElementById('usuarioPapel').value = u.papel||'engenheiro';
+    document.getElementById('usuarioObra').value = u.obra||'';
+  } else {
+    document.getElementById('usuarioEmail').value = '';
+    document.getElementById('usuarioEmail').disabled = false;
+    document.getElementById('usuarioNome').value = '';
+    document.getElementById('usuarioPapel').value = 'engenheiro';
+  }
+  onUsuarioPapelChange();
+  document.getElementById('usuarioSaveMsg').textContent = '';
+  const btn = document.getElementById('btnSalvarUsuario');
+  btn.disabled = false; btn.textContent = 'Salvar';
+  document.getElementById('usuarioModalBackdrop').classList.add('active');
+}
+function closeUsuarioModal(){ document.getElementById('usuarioModalBackdrop').classList.remove('active'); }
+async function saveUsuario(){
+  const email = document.getElementById('usuarioEmail').value.trim().toLowerCase();
+  if(!email || !email.includes('@')){ alert('Informe um e-mail válido.'); return; }
+  const papel = document.getElementById('usuarioPapel').value;
+  const data = {
+    email, papel,
+    nome: document.getElementById('usuarioNome').value.trim(),
+    obra: papel==='engenheiro' ? document.getElementById('usuarioObra').value : '',
+    ...auditFields(!document.getElementById('usuarioEmailOriginal').value),
+  };
+  const btn = document.getElementById('btnSalvarUsuario');
+  const msgEl = document.getElementById('usuarioSaveMsg');
+  msgEl.textContent = '';
+  btn.disabled = true; btn.textContent = 'Salvando…';
+  try{
+    await comTempoLimite(db.collection('usuarios').doc(email).set(data, { merge: true }));
+  }catch(e){
+    console.error(e);
+    const detalheTecnico = ' [código: '+((e&&e.code)||'nenhum')+' | msg: '+((e&&e.message)||'nenhuma')+']';
+    msgEl.textContent = traduzErroDados(e) + detalheTecnico;
+    btn.disabled = false; btn.textContent = 'Salvar';
+    return;
+  }
+  btn.disabled = false; btn.textContent = 'Salvar';
+  closeUsuarioModal();
+  renderUsuariosTable();
+}
+async function deleteUsuario(email){
+  if(!confirm('Remover o acesso deste usuário ao sistema? O login dele no Firebase Authentication não é apagado — só o perfil dentro deste sistema.')) return;
+  try{ await db.collection('usuarios').doc(email).delete(); }
+  catch(e){ console.error(e); alert(traduzErroDados(e)); return; }
+  renderUsuariosTable();
+}
+
+/* ---------- IMPRESSÃO ---------- */
+function printView(which){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('printing'));
+  const id = (which==='contrato' || which==='epirecibo') ? which : 'padrao';
+  document.getElementById('view-'+id).classList.add('printing');
+  window.print();
+}
+
+/* =========================================================================
+   AUTENTICAÇÃO (Firebase Auth) — protege CPF, RG e salário da equipe
+========================================================================= */
+function traduzErroAuth(e){
+  const code = (e && e.code) || '';
+  const mapa = {
+    'auth/user-not-found': 'E-mail ou senha incorretos.',
+    'auth/wrong-password': 'E-mail ou senha incorretos.',
+    'auth/invalid-credential': 'E-mail ou senha incorretos.',
+    'auth/invalid-email': 'E-mail inválido.',
+    'auth/user-disabled': 'Este usuário foi desativado no Firebase.',
+    'auth/too-many-requests': 'Muitas tentativas seguidas. Aguarde alguns minutos e tente de novo.',
+    'auth/network-request-failed': 'Falha de conexão com a internet. Verifique sua rede e tente novamente.',
+    'auth/operation-not-allowed': 'O login por e-mail/senha não está ativado neste projeto Firebase. Vá em Authentication → Sign-in method e ative "E-mail/senha".',
+    'auth/invalid-api-key': 'A apiKey do firebaseConfig parece incorreta. Confira se foi colada certinho.',
+    'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'A apiKey do firebaseConfig parece incorreta. Confira se foi colada certinho.',
+    'auth/project-not-found': 'O projectId do firebaseConfig parece incorreto.',
+  };
+  if(mapa[code]) return mapa[code];
+  if(code) return 'Erro do Firebase: '+code+'. Tire um print desta mensagem e envie para ajuste.';
+  return 'Não foi possível entrar. Tire um print desta tela e envie para ajuste. Detalhe técnico: '+((e&&e.message)||'desconhecido');
+}
+
+function traduzErroDados(e){
+  const code = (e && e.code) || '';
+  const mapa = {
+    'client/timeout': 'A operação demorou demais e foi cancelada — provavelmente sem conexão com o Firebase, ou as Regras do Firestore estão bloqueando silenciosamente. Confira sua internet e se as Regras foram publicadas no projeto certo (BENG ou SAVA).',
+    'permission-denied': 'Sem permissão para salvar. As Regras do Firestore (ou do Storage) ainda não foram publicadas, ou não permitem gravação para usuários logados. Confira em Firestore Database → Regras (e Storage → Regras) — e confira se está editando o projeto certo (BENG ou SAVA).',
+    'unavailable': 'Sem conexão com o Firebase agora. Verifique sua internet e tente novamente.',
+    'not-found': 'Não encontrado. Confira se o Firestore Database foi criado neste projeto (Firestore Database → Criar banco de dados).',
+    'failed-precondition': 'O Firestore ainda não foi criado neste projeto Firebase — vá em Firestore Database → Criar banco de dados.',
+    'unauthenticated': 'Sua sessão expirou. Saia e entre novamente.',
+    'resource-exhausted': 'Cota gratuita do Firebase atingida por hoje. Tente novamente mais tarde.',
+    'storage/unauthorized': 'Sem permissão para enviar o arquivo. As Regras do Firebase Storage ainda não foram publicadas para este projeto — vá em Storage → Regras, cole a regra e clique em Publicar.',
+    'storage/unauthenticated': 'Sua sessão expirou. Saia e entre novamente antes de enviar o arquivo.',
+    'storage/unknown': 'Erro desconhecido no Storage. As causas mais comuns são: (1) o Storage nunca foi ativado neste projeto (Storage → Vamos começar) ou (2) o projeto ainda está no plano gratuito Spark, que não permite criar o bucket padrão do Storage — é necessário upgrade para o plano Blaze (Project Settings → Usage and billing).',
+    'storage/bucket-not-found': 'O projeto não tem um bucket de Storage configurado. Vá em Storage → Vamos começar para criar o bucket (pode exigir o plano Blaze).',
+    'storage/object-not-found': 'Arquivo não encontrado no Storage (pode já ter sido removido).',
+    'storage/quota-exceeded': 'Cota gratuita do Storage atingida. Considere o plano Blaze ou libere espaço removendo documentos antigos.',
+    'storage/canceled': 'Envio cancelado.',
+    'storage/retry-limit-exceeded': 'O envio demorou demais e foi interrompido. Verifique sua conexão e tente novamente com um arquivo menor.',
+  };
+  if(mapa[code]) return mapa[code];
+  if(code) return 'Erro do Firebase: '+code+'. Tire um print desta mensagem e envie para ajuste.';
+  return 'Não foi possível salvar agora. Detalhe técnico: '+((e&&e.message)||'desconhecido');
+}
+
+async function doLogin(){
+  const email = document.getElementById('authEmail').value.trim();
+  const senha = document.getElementById('authSenha').value;
+  const errEl = document.getElementById('authError');
+  const btn = document.getElementById('authLoginBtn');
+  errEl.style.display = 'none';
+  if(!email || !senha){
+    errEl.textContent = 'Preencha e-mail e senha.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if(!firebaseConfigured() || !window.firebase){
+    errEl.textContent = 'Conexão com o Firebase não configurada neste arquivo ainda (veja o Guia de Configuração).';
+    errEl.style.display = 'block';
+    return;
+  }
+  if(!auth){ if(!initFirebase()){ errEl.textContent = 'Não foi possível iniciar o Firebase. Confira o firebaseConfig no arquivo.'; errEl.style.display='block'; return; } }
+  btn.disabled = true; btn.textContent = 'Entrando…';
+  try{
+    const cred = await auth.signInWithEmailAndPassword(email, senha);
+    onAuthenticated(cred.user);
+  }catch(e){
+    console.error('Erro de login:', e);
+    errEl.textContent = traduzErroAuth(e);
+    errEl.style.display = 'block';
+  }finally{
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+}
+async function doLogout(){
+  if(auth) await auth.signOut();
+  document.getElementById('authGate').classList.add('active');
+  document.getElementById('authEmail').value = '';
+  document.getElementById('authSenha').value = '';
+}
+function onAuthenticated(user){
+  document.getElementById('authGate').classList.remove('active');
+  document.getElementById('authUserLabel').textContent = (user && user.email) || '—';
+  loadUserRole().then(()=>{
+    if(!currentUserRole){
+      showSemPapelWarning();
+      return;
+    }
+    loadAll().then(()=>{
+      applyRoleUI();
+      const params = new URLSearchParams(window.location.search);
+      const alvo = params.get('view');
+      if(alvo && document.getElementById('view-'+alvo)) showView(alvo);
+      else defaultViewForRole();
+    });
+  });
+}
+function showSemPapelWarning(){
+  document.querySelector('main').innerHTML =
+    '<div class="card" style="max-width:640px; margin-top:40px;">'+
+    '<h3 style="color:#a8341f;">Seu acesso ainda não tem um perfil definido</h3>'+
+    '<p style="font-size:13.5px; line-height:1.6;">Seu login funcionou, mas nenhum Admin ainda liberou um perfil (Admin, Engenheiro ou SESMT) para o e-mail <strong>'+escapeHtml((auth&&auth.currentUser&&auth.currentUser.email)||'')+'</strong>. Peça para um Admin acessar "Usuários" e cadastrar seu acesso.</p>'+
+    '<button class="btn btn-ghost" style="margin-top:12px;" onclick="doLogout()">Sair</button>'+
+    '</div>';
+}
+function defaultViewForRole(){
+  const ehMobile = window.innerWidth <= 840; // mesmo ponto de corte usado no resto do sistema
+  if(ehMobile && (currentUserRole==='sesmt' || currentUserRole==='engenheiro')){
+    showView('acoes'); // celular: SESMT/Engenheiro entram direto nos atalhos grandes
+  } else {
+    showView('painel'); // computador (ou Admin): começa pela visão geral
+  }
+}
+
+/* =========================================================================
+   AÇÕES RÁPIDAS — atalhos grandes por perfil, pensados para celular
+========================================================================= */
+const ACOES_POR_PAPEL = {
+  sesmt: [
+    { icon:'&#10133;', label:'Registrar EPI', sub:'Entrega ou devolução', view:'epis', epiTab:2 },
+    { icon:'&#128721;', label:'Solicitações de EPI', sub:'Ver pedidos de troca', view:'epis', epiTab:1 },
+    { icon:'&#9888;&#65039;', label:'Checar NRs e ASO', sub:'Ver validades vencendo', view:'painel' },
+    { icon:'&#128221;', label:'Registrar Ocorrência', sub:'Advertência, elogio, etc.', view:'ocorrencias' },
+    { icon:'&#9776;', label:'Colaboradores', sub:'Ver cadastro da equipe', view:'colaboradores' },
+    { icon:'&#9745;', label:'Checklist', sub:'Admissão / Desligamento', view:'checklist' },
+  ],
+  engenheiro: [
+    { icon:'&#128101;', label:'Minha Equipe', sub:'Colaboradores da obra', view:'colaboradores' },
+    { icon:'&#128221;', label:'Advertência / Elogio', sub:'Registrar ocorrência da equipe', view:'ocorrencias' },
+    { icon:'&#129530;', label:'Solicitar Troca de EPI', sub:'Com foto do desgaste/dano', view:'epis', epiTab:1 },
+    { icon:'&#128721;', label:'Solicitar Desligamento', sub:'Encaminha para o RH avaliar', view:'ocorrencias', preencherDesligamento:true },
+  ],
+};
+function renderAcoesRapidas(){
+  const grid = document.getElementById('acoesGrid');
+  if(!grid) return;
+  const lista = ACOES_POR_PAPEL[currentUserRole] || ACOES_POR_PAPEL.sesmt;
+  grid.innerHTML = lista.map((a,i)=>
+    '<button class="acao-btn" onclick="executarAcaoRapida('+i+')"><span class="acao-icon">'+a.icon+'</span><span class="acao-label">'+escapeHtml(a.label)+'</span><span class="acao-sub">'+escapeHtml(a.sub)+'</span></button>'
+  ).join('');
+}
+function executarAcaoRapida(i){
+  const lista = ACOES_POR_PAPEL[currentUserRole] || ACOES_POR_PAPEL.sesmt;
+  const a = lista[i];
+  if(!a) return;
+  showView(a.view);
+  if(a.epiTab) setTimeout(()=>switchEpiTab(a.epiTab), 50);
+  if(a.preencherDesligamento){
+    // Ajuda o Engenheiro a já abrir o formulário de ocorrência com o tipo certo pré-selecionado
+    setTimeout(()=>{
+      const colabId = document.getElementById('ocorColabSelect').value;
+      if(!colabId){ alert('Selecione o colaborador na lista acima e toque em "+ Nova ocorrência".'); return; }
+      openOcorModal();
+      document.getElementById('ocorTipo').value = 'Solicitação de Desligamento';
+    }, 150);
+  }
+}
+
+function initAuth(){
+  const wrap = document.getElementById('authLogoWrap');
+  wrap.innerHTML = DEFAULT_LOGO ? '<img src="'+DEFAULT_LOGO+'" style="height:38px;" />' : '';
+
+  if(!window.firebase){
+    document.getElementById('authError').textContent = 'A biblioteca do Firebase não carregou. Verifique sua conexão com a internet e recarregue a página (se o problema continuar, pode ser bloqueio de rede/antivírus para arquivos abertos localmente).';
+    document.getElementById('authError').style.display = 'block';
+    return;
+  }
+  if(!initFirebase()){
+    showConfigWarning();
+    document.getElementById('authGate').classList.remove('active');
+    return;
+  }
+
+  // Se depois de 8s o Firebase não respondeu nada, avisa em vez de deixar a tela "travada" sem explicação
+  const watchdog = setTimeout(()=>{
+    const errEl = document.getElementById('authError');
+    errEl.textContent = 'Isso está demorando mais que o esperado. Confira sua internet, e se o projeto e as chaves do firebaseConfig estão corretos (veja o Guia de Configuração). Você já pode tentar fazer login mesmo assim.';
+    errEl.style.display = 'block';
+  }, 8000);
+
+  auth.onAuthStateChanged(user=>{
+    clearTimeout(watchdog);
+    if(user){ onAuthenticated(user); }
+    else{ document.getElementById('authGate').classList.add('active'); }
+  }, error=>{
+    clearTimeout(watchdog);
+    console.error('Erro ao verificar sessão:', error);
+    document.getElementById('authError').textContent = traduzErroAuth(error);
+    document.getElementById('authError').style.display = 'block';
+  });
+}
+
+initAuth();
+</script>
+</body>
+</html>
