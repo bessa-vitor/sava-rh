@@ -955,7 +955,12 @@ async function loadUserRole(){
 /* ---------- AUDITORIA — quem/quando salvou cada registro ---------- */
 /* ---------- Trava operações que "ficam penduradas" sem erro nenhum ---------- */
 function comTempoLimite(promessa, segundos){
-  segundos = segundos || 12;
+  segundos = segundos || 45;
+  // Mesmo que o tempo limite dispare, registra no Console o que a operação de verdade fez (ajuda a diagnosticar)
+  promessa.then(
+    r=>console.log('[Firebase] A operação concluiu (mesmo que tenha demorado):', r),
+    e=>console.error('[Firebase] A operação foi rejeitada (mesmo que tenha demorado):', e)
+  );
   return Promise.race([
     promessa,
     new Promise((_, reject)=>setTimeout(()=>reject({ code:'client/timeout', message:'A operação demorou mais que '+segundos+'s sem responder.' }), segundos*1000)),
@@ -2726,7 +2731,8 @@ async function saveUsuario(){
     await comTempoLimite(db.collection('usuarios').doc(email).set(data, { merge: true }));
   }catch(e){
     console.error(e);
-    msgEl.textContent = traduzErroDados(e);
+    const detalheTecnico = ' [código: '+((e&&e.code)||'nenhum')+' | msg: '+((e&&e.message)||'nenhuma')+']';
+    msgEl.textContent = traduzErroDados(e) + detalheTecnico;
     btn.disabled = false; btn.textContent = 'Salvar';
     return;
   }
