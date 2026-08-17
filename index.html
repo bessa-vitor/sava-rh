@@ -464,7 +464,10 @@
         <h3>Registrar entrega ou devolução</h3>
         <div class="grid">
           <div class="field"><label>Nome do EPI</label><input id="epiNome" placeholder="Ex: Capacete de segurança" /></div>
-          <div class="field"><label>C.A. (Certificado de Aprovação)</label><input id="epiCa" placeholder="Ex: 31469" /></div>
+          <div class="field"><label>C.A. (Certificado de Aprovação)</label>
+            <input id="epiCa" placeholder="Ex: 31469" maxlength="6" oninput="this.value=this.value.replace(/\D/g,''); validarCA();" />
+            <span class="field-hint" id="caHint"></span>
+          </div>
           <div class="field"><label>Validade do C.A.</label><input id="epiCaValidade" type="date" /></div>
           <div class="field"><label>Vida útil do equipamento (meses)</label><input id="epiVidaUtilMeses" type="number" min="1" placeholder="Ex: 12" /></div>
           <div class="field"><label>Data</label><input id="epiData" type="date" /></div>
@@ -475,17 +478,46 @@
         </div>
         <div class="field-hint" style="margin-top:6px;">Preencha ao menos um dos dois: Validade do C.A. (data fixa impressa no certificado) ou Vida útil em meses (calculada a partir da data de entrega). Deixe em branco o que não se aplicar.</div>
 
-        <div class="field" style="margin-top:14px;">
-          <label>Assinatura do colaborador</label>
-          <div class="sign-pad-wrap"><canvas id="epiSignCanvas"></canvas></div>
-          <div class="btn-row" style="margin-top:6px; margin-bottom:0;">
-            <button class="btn btn-ghost" type="button" onclick="clearSignature()">&#8635; Limpar assinatura</button>
+        <div class="field" style="margin-top:14px; border:1px solid var(--line); border-radius:10px; padding:12px;">
+          <label style="display:block; margin-bottom:6px;">&#128220; Termo de Responsabilidade (NR-06)</label>
+          <div style="font-size:12.5px; line-height:1.5; color:var(--ink-soft); max-height:110px; overflow-y:auto; border:1px solid var(--line); border-radius:6px; padding:8px; background:#fff;">
+            Declaro que recebi o(s) Equipamento(s) de Proteção Individual (EPI) descrito(s) acima, em perfeitas condições de uso, e estou ciente de que, nos termos da NR-06: (1) sou obrigado a usá-lo apenas para a finalidade a que se destina; (2) devo responsabilizar-me pela guarda e conservação do equipamento; (3) devo comunicar ao empregador qualquer alteração que o torne impróprio para uso; (4) devo cumprir as determinações do empregador sobre o uso adequado; (5) o uso incorreto ou a recusa injustificada em utilizá-lo pode caracterizar ato faltoso, sujeito às penalidades do Regimento Interno.
           </div>
+          <label class="checklist-item" style="padding:8px 4px 0 4px;">
+            <input type="checkbox" id="epiTermoNr6" />
+            <div class="ci-text">O colaborador leu (ou ouviu a leitura) e está ciente do termo acima</div>
+          </label>
+        </div>
+
+        <div class="field" style="margin-top:14px;">
+          <label>Autenticação da entrega (foto + localização + PIN do colaborador)</label>
+          <div class="dropzone" id="epiFotoColabDropzone">
+            <div class="dropzone-icon">&#128248;</div>
+            <div style="flex:1;">
+              <div style="font-size:13px; font-weight:700;">Foto do colaborador no momento da entrega</div>
+              <div class="field-hint">Obrigatória — evidência de que ele estava presente</div>
+              <div class="btn-row" style="margin-top:8px; margin-bottom:0;">
+                <label class="btn btn-ghost" style="cursor:pointer; margin:0;">Escolher da galeria
+                  <input type="file" id="epiFotoColab" accept="image/*" style="display:none;" onchange="previewEpiFotoColab()" />
+                </label>
+                <button type="button" class="btn btn-ghost" onclick="document.getElementById('epiFotoColabCapture').click()">&#128248; Tirar foto agora</button>
+                <input type="file" id="epiFotoColabCapture" accept="image/*" capture="user" style="display:none;" onchange="transferCapturedFile('epiFotoColabCapture','epiFotoColab')" />
+              </div>
+              <div id="epiFotoColabPreview" style="margin-top:8px;"></div>
+            </div>
+          </div>
+          <div class="field-hint" id="epiGeoStatus" style="margin-top:6px;">&#128205; Buscando localização…</div>
+        </div>
+
+        <div class="field" style="margin-top:10px;">
+          <label>PIN do colaborador (6 dígitos)</label>
+          <input id="epiPin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••" oninput="this.value=this.value.replace(/\D/g,'')" style="letter-spacing:6px; font-size:18px; text-align:center; max-width:180px;" />
+          <div class="field-hint">É o PIN cadastrado no perfil do colaborador. Se ele não souber ou não tiver PIN, marque a opção abaixo.</div>
         </div>
 
         <label class="checklist-item" style="padding:10px 4px 4px 4px;">
           <input type="checkbox" id="epiRecusa" onchange="onEpiRecusaChange()" />
-          <div class="ci-text">Colaborador se recusou a assinar</div>
+          <div class="ci-text">Colaborador não sabe/não tem PIN, ou se recusou a confirmar</div>
         </label>
         <div class="grid" id="epiTestemunhasWrap" style="display:none;">
           <div class="field"><label>Testemunha 1</label><input id="epiTest1" placeholder="Nome completo" /></div>
@@ -500,7 +532,7 @@
       <div class="card" id="epiListCard" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
           <h3 style="margin:0;">Histórico de EPIs</h3>
-          <button class="btn btn-ghost" onclick="imprimirHistoricoEpis()">&#128196; Imprimir histórico p/ assinatura física</button>
+          <button class="btn btn-ghost" onclick="imprimirHistoricoEpis()">&#128196; Imprimir histórico consolidado</button>
         </div>
         <div id="epiList"></div>
       </div>
@@ -704,6 +736,16 @@
           <span class="field-hint" id="cepHint"></span>
         </div>
         <div class="field" style="grid-column:1 / -1;"><label>Endereço completo</label><input id="cEndereco" placeholder="Preenchido automaticamente pelo CEP — complete com número/complemento" /></div>
+      </div>
+
+      <div style="margin-top:14px; border-top:1px solid var(--line); padding-top:14px;">
+        <h3 style="margin:0 0 6px 0; font-size:13px; text-transform:uppercase; letter-spacing:.4px; color:var(--accent-dark);">PIN de Segurança (assinatura digital de EPI)</h3>
+        <p class="field-hint" style="margin-top:0;">Usado pelo colaborador para confirmar o recebimento de EPI, junto com foto e localização no momento da entrega. Só o código-resumo (hash) fica salvo — o PIN em si nunca é guardado, então anote e entregue ao colaborador assim que gerar.</p>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <span id="pinStatusLabel" style="font-size:13px; font-weight:700;">Nenhum PIN definido ainda</span>
+          <button class="btn btn-ghost" type="button" onclick="gerarNovoPin()">&#128273; Gerar novo PIN</button>
+        </div>
+        <div id="pinGeradoBox" style="display:none; margin-top:8px;"></div>
       </div>
     </div>
 
@@ -1012,6 +1054,41 @@ async function loadUserRole(){
 
 /* ---------- AUDITORIA — quem/quando salvou cada registro ---------- */
 /* ---------- Trava operações que "ficam penduradas" sem erro nenhum ---------- */
+/* ---------- HASH DE INTEGRIDADE E PIN (autenticação digital da entrega de EPI) ---------- */
+async function sha256Hex(texto){
+  const buffer = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+  return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function hashPin(pin, colabId){
+  return sha256Hex('pin:'+pin+':'+colabId); // "salgado" com o ID do colaborador
+}
+function gerarPinAleatorio(){
+  return String(Math.floor(100000 + Math.random()*900000)); // 6 dígitos
+}
+// Validação só de FORMATO — não existe API oficial gratuita/confiável do governo para checar
+// a validade do C.A. em tempo real; a validade real é controlada pelo campo "Validade do C.A." abaixo.
+function validarCA(){
+  const el = document.getElementById('epiCa');
+  const hint = document.getElementById('caHint');
+  const v = el.value;
+  if(!v){ hint.textContent = ''; return true; }
+  if(v.length < 3 || v.length > 6){ hint.textContent = 'Formato incomum — o C.A. costuma ter de 3 a 6 dígitos. Confira no certificado.'; hint.style.color = '#a8341f'; return false; }
+  hint.textContent = '';
+  return true;
+}
+function obterGeolocalizacao(timeoutMs){
+  timeoutMs = timeoutMs || 8000;
+  return new Promise((resolve)=>{
+    if(!navigator.geolocation){ resolve(null); return; }
+    const t = setTimeout(()=>resolve(null), timeoutMs);
+    navigator.geolocation.getCurrentPosition(
+      pos=>{ clearTimeout(t); resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, precisao: Math.round(pos.coords.accuracy||0) }); },
+      ()=>{ clearTimeout(t); resolve(null); }, // negado ou indisponível — não trava a operação
+      { enableHighAccuracy:true, timeout: timeoutMs }
+    );
+  });
+}
+
 function comTempoLimite(promessa, segundos){
   segundos = segundos || 45;
   // Mesmo que o tempo limite dispare, registra no Console o que a operação de verdade fez (ajuda a diagnosticar)
@@ -1492,6 +1569,8 @@ function openColabModal(id){
     renderDocList(id);
     renderFotoPreview(id);
     renderDependentesList(id);
+    document.getElementById('pinStatusLabel').innerHTML = c.pinHash ? '&#9989; PIN já configurado' : 'Nenhum PIN definido ainda';
+    document.getElementById('pinGeradoBox').style.display = 'none';
   } else {
     currentColabIsNew = true;
     currentColabHasDraftDoc = false;
@@ -1534,6 +1613,32 @@ async function ensureDraftDoc(){
   colaboradores.push(draft);
   currentColabHasDraftDoc = true;
   return colabId;
+}
+
+async function gerarNovoPin(){
+  if(!confirm('Gerar um novo PIN vai substituir o anterior (se houver) — o colaborador precisará usar o novo a partir de agora. Confirmar?')) return;
+  let colabId;
+  try{ colabId = await ensureDraftDoc(); }catch(e){ return; }
+  const pin = gerarPinAleatorio();
+  const box = document.getElementById('pinGeradoBox');
+  box.style.display = 'block';
+  box.innerHTML = '<div class="field-hint">Gerando…</div>';
+  try{
+    const hash = await hashPin(pin, colabId);
+    await comTempoLimite(db.collection('colaboradores').doc(colabId).update({ pinHash: hash, pinDefinidoEm: new Date().toISOString(), ...auditFields(false) }));
+    const c = colaboradores.find(x=>x.id===colabId);
+    if(c){ c.pinHash = hash; }
+  }catch(e){
+    console.error(e);
+    box.innerHTML = '<div class="field-hint">'+traduzErroDados(e)+'</div>';
+    return;
+  }
+  document.getElementById('pinStatusLabel').innerHTML = '&#9989; PIN já configurado';
+  box.innerHTML =
+    '<div class="banner" style="background:#fdf1d8; border-color:#e0b23d;">'+
+      '<strong style="font-size:20px; letter-spacing:3px;">'+pin+'</strong><br>'+
+      'Anote e entregue ao colaborador agora — este número <strong>não será mostrado novamente</strong>. O sistema guarda só um código-resumo (hash), nunca o PIN em si.'+
+    '</div>';
 }
 
 async function closeColabModal(){
@@ -1786,6 +1891,23 @@ function previewSolFoto(){
   if(!wrap) return;
   const file = input.files && input.files[0];
   wrap.innerHTML = file ? '<img src="'+URL.createObjectURL(file)+'" style="width:64px; height:64px; object-fit:cover; border-radius:6px; border:1px solid var(--line);" />' : '';
+}
+function previewEpiFotoColab(){
+  const input = document.getElementById('epiFotoColab');
+  const wrap = document.getElementById('epiFotoColabPreview');
+  if(!wrap) return;
+  const file = input.files && input.files[0];
+  wrap.innerHTML = file ? '<img src="'+URL.createObjectURL(file)+'" style="width:72px; height:72px; object-fit:cover; border-radius:6px; border:1px solid var(--line);" />' : '';
+}
+let epiGeoAtual = null;
+async function atualizarGeoStatusEpi(){
+  const el = document.getElementById('epiGeoStatus');
+  if(!el) return;
+  el.textContent = '📍 Buscando localização…';
+  epiGeoAtual = await obterGeolocalizacao();
+  el.textContent = epiGeoAtual
+    ? '📍 Localização capturada (precisão ~'+epiGeoAtual.precisao+'m)'
+    : '📍 Localização indisponível (GPS negado ou sem sinal) — o registro segue sem esse dado, sem travar a entrega.';
 }
 function previewOcorFotos(){
   const input = document.getElementById('ocorFotos');
@@ -2305,7 +2427,7 @@ function sigHasContent(canvasId){
 function onEpiRecusaChange(){
   const checked = document.getElementById('epiRecusa').checked;
   document.getElementById('epiTestemunhasWrap').style.display = checked ? 'grid' : 'none';
-  document.querySelector('.sign-pad-wrap').style.opacity = checked ? '0.4' : '1';
+  document.getElementById('epiPin').disabled = checked;
 }
 function onOcorRecusaChange(){
   const checked = document.getElementById('ocorRecusa').checked;
@@ -2332,9 +2454,14 @@ async function renderEpis(){
     onEpiRecusaChange();
     document.getElementById('epiTest1').value = '';
     document.getElementById('epiTest2').value = '';
+    document.getElementById('epiTermoNr6').checked = false;
+    document.getElementById('epiPin').value = '';
+    document.getElementById('epiFotoColab').value = '';
+    document.getElementById('epiFotoColabPreview').innerHTML = '';
+    setupDropzone('epiFotoColabDropzone','epiFotoColab');
+    atualizarGeoStatusEpi();
   }
   document.getElementById('epiData').value = document.getElementById('epiData').value || new Date().toISOString().slice(0,10);
-  setTimeout(()=>{ setupSignaturePad(); clearSignature(); }, 30);
   const list = await getEpis(colabId);
   const sorted = [...list].sort((a,b)=> (b.data||'').localeCompare(a.data||''));
   if(sorted.length===0){
@@ -2370,12 +2497,16 @@ async function saveEpi(){
   const nomeEpi = document.getElementById('epiNome').value.trim();
   if(!nomeEpi){ alert('Informe o nome do EPI.'); return; }
   const ca = document.getElementById('epiCa').value.trim();
+  if(ca && !validarCA()){ alert('Confira o número do C.A. — o formato não parece válido.'); return; }
   const caValidade = document.getElementById('epiCaValidade').value;
   const vidaUtilMeses = document.getElementById('epiVidaUtilMeses').value ? Number(document.getElementById('epiVidaUtilMeses').value) : null;
   const data = document.getElementById('epiData').value;
   const quantidade = Number(document.getElementById('epiQtd').value) || 1;
   const statusEpi = document.getElementById('epiStatus').value;
   const recusaAssinatura = document.getElementById('epiRecusa').checked;
+  const termoAceito = document.getElementById('epiTermoNr6').checked;
+
+  if(!termoAceito){ alert('Marque a confirmação de que o colaborador está ciente do Termo de Responsabilidade (NR-06) antes de registrar.'); return; }
 
   // Data prevista de substituição: usa o menor entre "validade do C.A." e "data de entrega + vida útil"
   let substituicaoPrevista = null;
@@ -2386,25 +2517,54 @@ async function saveEpi(){
   }
   if(caValidade && (!substituicaoPrevista || caValidade < substituicaoPrevista)) substituicaoPrevista = caValidade;
 
-  let assinaturaDataUrl = null, testemunha1 = null, testemunha2 = null;
+  let testemunha1 = null, testemunha2 = null, pinConfirmado = false;
+  const c = colaboradores.find(x=>x.id===colabId) || {};
   if(recusaAssinatura){
     testemunha1 = document.getElementById('epiTest1').value.trim();
     testemunha2 = document.getElementById('epiTest2').value.trim();
-    if(!testemunha1 || !testemunha2){ alert('Em caso de recusa, informe o nome das 2 testemunhas — é o que garante o valor jurídico do registro.'); return; }
+    if(!testemunha1 || !testemunha2){ alert('Sem PIN, informe o nome das 2 testemunhas — é o que garante o valor jurídico do registro.'); return; }
   } else {
-    if(!sigHasContent('epiSignCanvas')){ alert('Colete a assinatura do colaborador na tela antes de registrar (ou marque "Colaborador se recusou a assinar").'); return; }
-    assinaturaDataUrl = document.getElementById('epiSignCanvas').toDataURL('image/png');
+    const pinDigitado = document.getElementById('epiPin').value;
+    if(pinDigitado.length !== 6){ alert('Digite o PIN de 6 dígitos do colaborador (ou marque a opção de recusa/sem PIN).'); return; }
+    if(!c.pinHash){ alert('Este colaborador ainda não tem PIN cadastrado. Cadastre um PIN na ficha dele (aba Dados Pessoais) antes de registrar a entrega — ou marque a opção de recusa/sem PIN.'); return; }
+    const hashDigitado = await hashPin(pinDigitado, colabId);
+    if(hashDigitado !== c.pinHash){ alert('PIN incorreto. Confira com o colaborador e tente novamente.'); return; }
+    pinConfirmado = true;
   }
+
+  const fotoInput = document.getElementById('epiFotoColab');
+  const fotoFile = fotoInput.files[0];
+  if(!recusaAssinatura && !fotoFile){ alert('A foto do colaborador é obrigatória para confirmar a entrega (ou marque a opção de recusa/sem PIN).'); return; }
 
   const btn = document.getElementById('btnSalvarEpi');
   const msgEl = document.getElementById('epiSaveMsg');
   msgEl.textContent = '';
   btn.disabled = true; btn.textContent = 'Salvando…';
   const id = 'ep'+Date.now();
+
+  let fotoColabUrl = null, fotoColabPath = null;
   try{
+    if(fotoFile){
+      const path = 'colaboradores/'+colabId+'/epis/'+id+'_foto_'+fotoFile.name;
+      const snapshot = await comTempoLimite(storage.ref(path).put(fotoFile), 60);
+      fotoColabUrl = await comTempoLimite(snapshot.ref.getDownloadURL());
+      fotoColabPath = path;
+    }
+    const agoraIso = new Date().toISOString();
+    const geo = epiGeoAtual; // capturado ao abrir a tela (best-effort — não bloqueia se indisponível)
+    const hashIntegridade = await sha256Hex(
+      [c.cpf||'', id, agoraIso, ca||'', geo ? geo.lat+','+geo.lng : 'sem-geo'].join('|')
+    );
+
     await comTempoLimite(db.collection('epis').doc(id).set({
       colaboradorId: colabId, nomeEpi, ca, caValidade, vidaUtilMeses, substituicaoPrevista, data, quantidade, statusEpi,
-      recusaAssinatura, assinaturaDataUrl, testemunha1, testemunha2,
+      recusaAssinatura, testemunha1, testemunha2,
+      termoNr6Aceito: termoAceito,
+      pinConfirmado,
+      fotoColabUrl, fotoColabPath,
+      geo,
+      hashIntegridade,
+      timestampServidor: firebase.firestore.FieldValue.serverTimestamp(),
       ...auditFields(true),
     }));
     if(solicitacaoEmAtendimentoId){
@@ -2433,8 +2593,11 @@ async function saveEpi(){
   document.getElementById('epiRecusa').checked = false;
   document.getElementById('epiTest1').value = '';
   document.getElementById('epiTest2').value = '';
+  document.getElementById('epiTermoNr6').checked = false;
+  document.getElementById('epiPin').value = '';
+  document.getElementById('epiFotoColab').value = '';
+  document.getElementById('epiFotoColabPreview').innerHTML = '';
   onEpiRecusaChange();
-  clearSignature();
   renderEpis();
   renderPainel();
 }
@@ -2579,22 +2742,38 @@ async function deleteEpi(colabId, epiId){
   renderEpis();
   renderPainel();
 }
+// Bloco de autenticação digital — substitui a assinatura física no comprovante impresso
+function blocoAutenticacaoDigital(ep){
+  if(ep.recusaAssinatura){
+    return '<div style="margin-top:26px; border:1px solid #ccc; border-radius:6px; padding:12px;">'+
+      '<p style="margin:0 0 8px 0;"><strong>Sem confirmação por PIN — o(a) colaborador(a) não informou/recusou.</strong> O recebimento/devolução foi presenciado e é atestado pelas testemunhas abaixo (Regimento Interno, art. 34, aplicado por analogia).</p>' +
+      '<div class="sign"><div class="line"></div>Testemunha 1 — '+escapeHtml(ep.testemunha1||'')+'</div>' +
+      '<div class="sign"><div class="line"></div>Testemunha 2 — '+escapeHtml(ep.testemunha2||'')+'</div>' +
+    '</div>';
+  }
+  const dataHora = ep.updatedAt ? new Date(ep.updatedAt).toLocaleString('pt-BR') : '—';
+  const geoTxt = ep.geo ? ep.geo.lat.toFixed(6)+', '+ep.geo.lng.toFixed(6)+' (precisão ~'+ep.geo.precisao+'m)' : 'Não capturada (GPS indisponível no momento)';
+  const fotoHTML = ep.fotoColabUrl
+    ? '<img src="'+ep.fotoColabUrl+'" style="width:90px; height:90px; object-fit:cover; border-radius:6px; border:1px solid #ccc;" />'
+    : '<div style="width:90px; height:90px; border-radius:6px; border:1px dashed #ccc; display:flex; align-items:center; justify-content:center; color:#aaa; font-size:11px;">sem foto</div>';
+  return '<div style="margin-top:26px; border:1px solid #ccc; border-radius:6px; padding:12px;">'+
+    '<p style="margin:0 0 10px 0; font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:#555;"><strong>Bloco de Autenticação Digital</strong></p>' +
+    '<div style="display:flex; gap:14px; align-items:flex-start;">'+
+      fotoHTML+
+      '<div style="flex:1; font-size:11.5px; line-height:1.7;">'+
+        '<div><strong>Confirmação por PIN:</strong> '+(ep.pinConfirmado ? 'Confirmado pelo colaborador' : 'Não confirmado')+'</div>'+
+        '<div><strong>Termo NR-06:</strong> '+(ep.termoNr6Aceito ? 'Lido e aceito' : '—')+'</div>'+
+        '<div><strong>Geolocalização:</strong> '+geoTxt+'</div>'+
+        '<div><strong>Data/hora (servidor):</strong> '+dataHora+'</div>'+
+        '<div style="word-break:break-all;"><strong>Hash de integridade (SHA-256):</strong> '+escapeHtml(ep.hashIntegridade||'—')+'</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
 function epiReciboHTML(colabId, ep){
   const c = colaboradores.find(x=>x.id===colabId) || {};
   const acao = ep.statusEpi==='Devolvido' ? 'DEVOLUÇÃO' : 'ENTREGA';
   const verbo = ep.statusEpi==='Devolvido' ? 'devolvi' : 'recebi';
-  let assinBlock;
-  if(ep.recusaAssinatura){
-    assinBlock =
-      '<p style="margin-top:26px;"><strong>Assinatura não coletada — o(a) colaborador(a) se recusou a assinar.</strong> O recebimento/devolução foi presenciado e é atestado pelas testemunhas abaixo (Regimento Interno, art. 34, aplicado por analogia).</p>' +
-      '<div class="sign"><div class="line"></div>Testemunha 1 — '+escapeHtml(ep.testemunha1||'')+'</div>' +
-      '<div class="sign"><div class="line"></div>Testemunha 2 — '+escapeHtml(ep.testemunha2||'')+'</div>';
-  } else {
-    assinBlock = '<div style="text-align:center; margin-top:28px;">'+
-      '<img src="'+ep.assinaturaDataUrl+'" style="max-width:320px; max-height:110px;" />' +
-      '<div style="border-top:1px solid #333; width:300px; margin:2px auto 4px auto;"></div>' +
-      '<p style="font-size:11px; color:#888;">Assinatura do(a) colaborador(a)</p></div>';
-  }
   return logoBlock() +
     '<h1>RECIBO DE '+acao+' DE EPI</h1>' +
     '<p style="text-align:center; color:#888; font-size:12px;">'+escapeHtml(empresa.nome)+' &middot; CNPJ '+hl(empresa.cnpj)+'</p>' +
@@ -2604,8 +2783,8 @@ function epiReciboHTML(colabId, ep){
     '<p><strong>EPI:</strong> '+escapeHtml(ep.nomeEpi)+' &nbsp; <strong>C.A.:</strong> '+escapeHtml(ep.ca||'—')+' &nbsp; <strong>Quantidade:</strong> '+escapeHtml(String(ep.quantidade))+'</p>' +
     '<p><strong>Data:</strong> '+fmtData(ep.data)+'</p>' +
     '<p style="margin-top:16px;">Declaro, para os devidos fins e nos termos da NR-06, que '+verbo+' o(s) Equipamento(s) de Proteção Individual acima descrito(s), em perfeitas condições de uso, tendo sido orientado(a) quanto à obrigatoriedade do uso correto, guarda e conservação, conforme o Regimento Interno da empresa.</p>' +
-    assinBlock +
-    '<p style="margin-top:30px; font-size:11px; color:#888;">Registrado por '+escapeHtml(ep.createdBy||'—')+' em '+ (ep.updatedAt ? new Date(ep.updatedAt).toLocaleString('pt-BR') : '—') +'. Documento gerado automaticamente pelo sistema.</p>';
+    blocoAutenticacaoDigital(ep) +
+    '<p style="margin-top:16px; font-size:11px; color:#888;">Registrado por '+escapeHtml(ep.createdBy||'—')+'. Documento gerado automaticamente pelo sistema.</p>';
 }
 async function verReciboEpi(colabId, epiId){
   const list = await getEpis(colabId);
@@ -2619,7 +2798,9 @@ function historicoEpisHTML(colabId, lista){
   const c = colaboradores.find(x=>x.id===colabId) || {};
   const linhas = lista.map(ep=>{
     const acao = ep.statusEpi==='Devolvido' ? 'Devolução' : 'Entrega';
-    const prova = ep.recusaAssinatura ? 'Testemunhas: '+escapeHtml(ep.testemunha1||'')+' / '+escapeHtml(ep.testemunha2||'') : 'Assinado digitalmente na entrega';
+    const prova = ep.recusaAssinatura
+      ? 'Sem PIN — testemunhas: '+escapeHtml(ep.testemunha1||'')+' / '+escapeHtml(ep.testemunha2||'')
+      : (ep.pinConfirmado ? 'PIN confirmado + foto + geolocalização' : 'Registro sem confirmação por PIN');
     return '<tr>'+
       '<td style="padding:5px; border-bottom:1px solid #ddd;">'+fmtData(ep.data)+'</td>'+
       '<td style="padding:5px; border-bottom:1px solid #ddd;">'+escapeHtml(ep.nomeEpi)+'</td>'+
@@ -2638,10 +2819,7 @@ function historicoEpisHTML(colabId, lista){
       '<thead><tr>'+['Data','EPI','C.A.','Qtd','Ação','Registro de prova'].map(h=>'<th style="text-align:left; padding:5px; border-bottom:2px solid #333; font-size:10.5px; text-transform:uppercase; color:#555;">'+h+'</th>').join('')+'</tr></thead>' +
       '<tbody>'+(linhas || '<tr><td colspan="6" style="padding:10px; text-align:center; color:#888;">Nenhum registro.</td></tr>')+'</tbody>' +
     '</table>' +
-    '<p style="margin-top:20px;">Declaro, para os devidos fins e nos termos da NR-06, estar ciente de todas as entregas e devoluções de Equipamentos de Proteção Individual listadas acima, tendo recebido treinamento e orientação quanto ao uso correto, guarda e conservação de cada equipamento.</p>' +
-    '<p style="margin-top:6px; font-size:11px; color:#888;">Esta assinatura física complementa (não substitui) as assinaturas digitais individuais já coletadas no ato de cada entrega, reforçando a validade probatória do registro perante eventual questionamento judicial.</p>' +
-    '<div class="sign" style="margin-top:40px;"><div class="line"></div>'+escapeHtml(c.nome||'[NOME DO COLABORADOR]')+' — assinatura física</div>' +
-    '<p style="margin-top:10px;">'+ hl(empresa.cidade) +', ____ de ____________ de '+new Date().getFullYear()+'.</p>' +
+    '<p style="margin-top:20px;">Cada entrega/devolução listada acima possui, no sistema, seu próprio Bloco de Autenticação Digital individual (PIN do colaborador, foto no momento do recebimento, geolocalização, data/hora do servidor e hash de integridade SHA-256) — disponível ao imprimir o recibo individual de cada item pela tela de Gestão de EPIs.</p>' +
     '<p style="margin-top:26px; font-size:11px; color:#888;">Documento gerado automaticamente pelo sistema em '+new Date().toLocaleString('pt-BR')+'.</p>';
 }
 async function imprimirHistoricoEpis(){
